@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Olly's GCSE Command Centre</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;--bg2:#0d0d0d;--bg3:#111;--bg4:#161616;
+  --border:#1f1f1f;--border2:#2a2a2a;
+  --text:#e2e8f0;--text2:#aaa;--text3:#666;--text4:#444;
+  --green:#22c55e;--green-bg:#061a0e;--green-border:#0f3020;
+  --yellow:#eab308;--yellow-bg:#1a1500;--yellow-border:#2a2200;
+  --red:#ef4444;--red-bg:#1a0808;--red-border:#3a1111;
+  --blue:#3b82f6;--blue-bg:#0f1e3a;--blue-border:#1a3060;
+  --orange:#f97316;--purple:#a855f7;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:#111}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+button{cursor:pointer;border:none;background:none;color:inherit;font-family:inherit;font-size:inherit}
+input,textarea,select{font-family:inherit;font-size:inherit;color:var(--text)}
+a{color:var(--blue);text-decoration:none}
+
+/* LAYOUT */
+#app{display:flex;min-height:100vh}
+#sidebar{width:220px;min-height:100vh;background:#080808;border-right:1px solid #181818;display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow-y:auto}
+#main{margin-left:220px;flex:1;padding:28px 32px;max-width:calc(100vw - 220px);min-height:100vh}
+
+/* SIDEBAR */
+.sb-header{padding:20px 16px 14px;border-bottom:1px solid #181818}
+.sb-brand{font-size:11px;font-weight:700;color:var(--green);letter-spacing:1px;text-transform:uppercase}
+.sb-title{font-size:17px;font-weight:800;color:#fff}
+.sb-profile{margin-top:12px;padding:8px 10px;background:#0f0f0f;border-radius:8px;border:1px solid #1a1a1a}
+.sb-username{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.8px}
+.sb-rank{font-size:13px;font-weight:700;margin-top:2px}
+.sb-streak{font-size:11px;color:#555;margin-top:1px}
+.sb-xp-label{font-size:10px;color:#555;margin-top:4px}
+nav{flex:1;padding:8px}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:8px;margin-bottom:2px;text-align:left;font-size:13px;font-weight:500;color:#555;border-left:2px solid transparent;transition:all .15s;background:transparent}
+.nav-btn:hover{color:#aaa;background:#0d0d0d}
+.nav-btn.active{background:#161616;color:#fff;border-left-color:var(--green)}
+.nav-icon{font-size:15px;width:18px;text-align:center}
+.sb-footer{padding:10px 16px;border-top:1px solid #181818;font-size:10px;color:#2a2a2a}
+
+/* CARDS */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;transition:border-color .2s}
+.card-hover:hover{border-color:#333;cursor:pointer}
+.card-title{font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+
+/* PROGRESS BARS */
+.bar-wrap{background:#1a1a1a;border-radius:99px;overflow:hidden}
+.bar-fill{border-radius:99px;transition:width .5s ease;height:100%}
+
+/* STAT BOXES */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-box{background:#0d0d0d;border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.stat-value{font-size:26px;font-weight:800;line-height:1}
+.stat-sub{font-size:11px;color:#444;margin-top:3px}
+
+/* BADGES */
+.badge{border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:.3px;display:inline-block}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow)}
+.badge-gray{background:#111;color:#555;border:1px solid #222}
+
+/* GRID HELPERS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+.page-title{font-size:20px;font-weight:800;color:#fff;margin-bottom:4px}
+.page-sub{font-size:13px;color:#555;margin-bottom:20px}
+
+/* HERO */
+.hero{padding:20px 24px;background:linear-gradient(135deg,#0d1a0d 0%,#0a0a0a 100%);border:1px solid #1a2a1a;border-radius:14px;margin-bottom:24px}
+
+/* MISSION ITEM */
+.mission-item{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:10px;cursor:pointer;transition:all .2s;margin-bottom:8px}
+.mission-item.done{background:#061a0e;border:1px solid #0f3020}
+.mission-item.todo{background:#0d0d0d;border:1px solid #1a1a1a}
+.checkbox{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;font-size:12px;font-weight:700;color:#000}
+.checkbox.checked{background:var(--green);border:2px solid var(--green)}
+.checkbox.unchecked{background:transparent;border:2px solid #333}
+
+/* SUBJECT CARD */
+.subj-card{cursor:pointer}
+.subj-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.subj-emoji{font-size:22px}
+.subj-name{font-weight:700;color:var(--text);font-size:14px}
+.subj-count{font-size:11px;color:#555}
+.subj-level{font-size:22px;font-weight:800}
+
+/* TABS */
+.tabs{display:flex;gap:6px;margin-bottom:18px}
+.tab{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid transparent;text-transform:capitalize}
+.tab.active{background:#161616;color:var(--green);border-color:#2a2a2a}
+.tab.inactive{color:#555;background:transparent}
+.tab.inactive:hover{color:#aaa}
+
+/* TOPIC ITEM */
+.topic-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .2s}
+.topic-item.done{background:#061a0e;border:1px solid #0f3020}
+.topic-item.todo{background:#0d0d0d;border:1px solid #1a1a1a}
+
+/* ACHIEVEMENT */
+.ach-card{background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;padding:16px 14px;text-align:center;transition:all .2s}
+.ach-card.earned{background:#0f1e0f;border-color:#1a4a1a}
+.ach-icon{font-size:32px;margin-bottom:8px;display:block;transition:filter .2s}
+.ach-icon.locked{filter:grayscale(100%) brightness(0.3)}
+.ach-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.ach-desc{font-size:11px;color:#444}
+
+/* CALENDAR */
+.cal-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;min-width:700px}
+.cal-day-header{text-align:center;font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #1a1a1a}
+.cal-period{margin-bottom:7px;border-radius:8px;padding:8px 10px}
+.cal-time{font-size:10px;color:#555;margin-bottom:2px}
+.cal-subj{font-size:11px;font-weight:700;line-height:1.3}
+.cal-room{font-size:10px;color:#444;margin-top:1px}
+
+/* BOSS */
+.boss-result{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0d0d0d;border-radius:6px;margin-bottom:6px}
+.boss-score{font-size:16px;font-weight:800}
+
+/* CHART - simple CSS bars */
+.chart-wrap{padding:8px 0}
+.chart-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px}
+.chart-label{width:80px;text-align:right;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.chart-bar-bg{flex:1;background:#1a1a1a;border-radius:99px;height:14px;overflow:hidden}
+.chart-bar-inner{height:100%;border-radius:99px;transition:width .6s ease;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:700;color:#000}
+
+/* LINE CHART SVG */
+.line-chart{overflow:visible}
+
+/* FORMS */
+.form-input{background:#0d0d0d;border:1px solid #222;border-radius:6px;padding:8px 10px;color:var(--text);width:100%}
+.form-input:focus{border-color:#333;outline:none}
+.btn{border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:1px solid transparent}
+.btn-blue{background:var(--blue-bg);color:var(--blue);border-color:var(--blue-border)}
+.btn-green{background:var(--green-bg);color:var(--green);border-color:var(--green-border)}
+.btn-red{background:var(--red-bg);color:var(--red);border-color:var(--red-border)}
+.btn-gray{background:#111;color:#555;border-color:#222}
+.btn-yellow{background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow-border)}
+.btn:hover{opacity:.85}
+
+/* SKILL TREE */
+.skill-node{display:flex;align-items:center;gap:12px;width:100%;max-width:380px;margin:0 auto 8px}
+.skill-circle{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;transition:all .3s}
+
+/* RESOURCE ITEM */
+.res-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;margin-bottom:8px}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;background:#0f2a1a;color:var(--green);border:1px solid var(--green-border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+
+/* DETAIL BACK BTN */
+.back-btn{display:flex;align-items:center;gap:6px;color:#555;font-size:13px;margin-bottom:16px;cursor:pointer;background:none;border:none;padding:0}
+.back-btn:hover{color:#aaa}
+
+/* OVERFLOW */
+.scroll-x{overflow-x:auto}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="app">
+  <div id="sidebar">
+    <div class="sb-header">
+      <div class="sb-brand">⚡ GCSE</div>
+      <div class="sb-title">Command Centre</div>
+      <div class="sb-profile">
+        <div class="sb-username">Olly</div>
+        <div class="sb-rank" id="sb-rank">📚 Apprentice</div>
+        <div class="sb-streak" id="sb-streak">🔥 4 day streak</div>
+        <div style="margin-top:6px">
+          <div class="bar-wrap" style="height:4px"><div class="bar-fill" id="sb-bar" style="background:#f59e0b;width:0%"></div></div>
+        </div>
+        <div class="sb-xp-label" id="sb-xp-label">650 XP</div>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="sb-footer">Year 7 → GCSE Champion</div>
+  </div>
+  <div id="main">
+    <div id="page-dashboard" class="page"></div>
+    <div id="page-subjects" class="page"></div>
+    <div id="page-missions" class="page"></div>
+    <div id="page-boss" class="page"></div>
+    <div id="page-achievements" class="page"></div>
+    <div id="page-calendar" class="page"></div>
+    <div id="page-resources" class="page"></div>
+    <div id="page-analytics" class="page"></div>
+    <div id="page-settings" class="page"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
+const RANKS=[
+  {name:'Novice',min:0,max:99,icon:'🌱',color:'#6b7280'},
+  {name:'Apprentice',min:100,max:249,icon:'📚',color:'#f59e0b'},
+  {name:'Scholar',min:250,max:499,icon:'🎓',color:'#8b5cf6'},
+  {name:'Expert',min:500,max:999,icon:'⚡',color:'#3b82f6'},
+  {name:'Master',min:1000,max:1999,icon:'🔥',color:'#f97316'},
+  {name:'GCSE Champion',min:2000,max:9999,icon:'👑',color:'#22c55e'},
+];
+const NAV_ITEMS=[
+  {id:'dashboard',label:'Dashboard',icon:'🏠'},
+  {id:'subjects',label:'Subjects',icon:'📚'},
+  {id:'missions',label:'Missions',icon:'🎯'},
+  {id:'boss',label:'Boss Battles',icon:'⚔️'},
+  {id:'achievements',label:'Achievements',icon:'🏆'},
+  {id:'calendar',label:'Calendar',icon:'📅'},
+  {id:'resources',label:'Resources',icon:'📂'},
+  {id:'analytics',label:'Analytics',icon:'📊'},
+  {id:'settings',label:'Settings',icon:'⚙️'},
+];
+const QUOTES=[
+  'Every expert was once a beginner. Keep going, Olly!',
+  'The secret of getting ahead is getting started.',
+  'Success is the sum of small efforts repeated daily.',
+  'Hard work beats talent when talent doesn\'t work hard.',
+  'The more you learn, the more you earn.',
+  'Don\'t wish it were easier — wish you were better.',
+  'Believe you can and you\'re halfway there.',
+  'Champions train, losers complain.',
+];
+const TIMETABLE=[
+  {day:'Monday',periods:[{time:'9:00',subject:'Maths',room:'R12'},{time:'10:00',subject:'English Lang',room:'E4'},{time:'11:20',subject:'Science',room:'L1'},{time:'13:00',subject:'Art',room:'A2'},{time:'14:00',subject:'Jewish Studies',room:'JS1'}]},
+  {day:'Tuesday',periods:[{time:'9:00',subject:'English Lit',room:'E4'},{time:'10:00',subject:'Science',room:'L1'},{time:'11:20',subject:'Business',room:'B3'},{time:'13:00',subject:'Wood Tech',room:'DT1'},{time:'14:00',subject:'Maths',room:'R12'}]},
+  {day:'Wednesday',periods:[{time:'9:00',subject:'Jewish Studies',room:'JS1'},{time:'10:00',subject:'Maths',room:'R12'},{time:'11:20',subject:'English Lang',room:'E4'},{time:'13:00',subject:'Science',room:'L1'},{time:'14:00',subject:'Art',room:'A2'}]},
+  {day:'Thursday',periods:[{time:'9:00',subject:'Business',room:'B3'},{time:'10:00',subject:'English Lit',room:'E4'},{time:'11:20',subject:'Maths',room:'R12'},{time:'13:00',subject:'Wood Tech',room:'DT1'},{time:'14:00',subject:'Science',room:'L1'}]},
+  {day:'Friday',periods:[{time:'9:00',subject:'Art',room:'A2'},{time:'10:00',subject:'Maths',room:'R12'},{time:'11:20',subject:'Jewish Studies',room:'JS1'},{time:'13:00',subject:'English Lang',room:'E4'},{time:'14:00',subject:'Business',room:'B3'}]},
+];
+const SUBJ_COLORS={'Maths':'#3b82f6','English Lang':'#a855f7','English Lit':'#ec4899','Science':'#22c55e','Jewish Studies':'#f59e0b','Art':'#f97316','Wood Tech':'#78716c','Business':'#06b6d4'};
+
+function defaultState(){
+  return {
+    totalXP:0, streak:0,
+    subjects:[
+      {id:'eng-lang',name:'English Language',emoji:'📝',level:1,xp:0,weakTopics:[],strengths:[],notes:'',
+       topics:[{name:'Reading comprehension',done:false},{name:'Language techniques',done:false},{name:'Creative writing',done:false},{name:'Transactional writing',done:false},{name:'Explaining effects',done:false}]},
+      {id:'eng-lit',name:'English Literature',emoji:'📖',level:1,xp:0,weakTopics:[],strengths:[],notes:'',
+       topics:[{name:'Macbeth',done:false},{name:'An Inspector Calls',done:false},{name:'Poetry anthology',done:false},{name:'Unseen poetry',done:false}]},
+      {id:'maths',name:'Mathematics',emoji:'📐',level:1,xp:0,weakTopics:[],strengths:[],notes:'',
+       topics:[{name:'Algebra',done:false},{name:'Geometry',done:false},{name:'Percentages',done:false},{name:'Trigonometry',done:false},{name:'Statistics',done:false},{name:'Number',done:false}]},
+      {id:'science',name:'Double Award Science',emoji:'🔬',level:1,xp:0,weakTopics:[],strengths:[],notes:'',
+       topics:[{name:'Cell biology',done:false},{name:'Forces',done:false},{name:'Density',done:false},{name:'Chemical reactions',done:false},{name:'Electricity',done:false},{name:'Genetics',done:false}]},
+      {id:'jewish',name:'Jewish Studies',emoji:'✡️',level:1,xp:0,weakTopics:[],strengths:[],notes:'',
+       topics:[{name:'Torah',done:false},{name:'Shabbat',done:false},{name:'Jewish law',done:false},{name:'History',done:false}]},
+      {id:'art',name:'Art',emoji:'🎨',level:1,xp:0,weakTopics:[],strengths:[],notes:'',
+       topics:[{name:'Drawing',done:false},{name:'Painting',done:false},{name:'Ceramics',done:false},{name:'Portfolio',done:false}]},
+      {id:'woodtech',name:'Wood Technology',emoji:'🪚',level:1,xp:0,weakTopics:[],strengths:[],notes:'',
+       topics:[{name:'Joinery',done:false},{name:'Materials',done:false},{name:'CAD design',done:false},{name:'Finishing',done:false}]},
+      {id:'business',name:'Business Studies',emoji:'💼',level:1,xp:0,weakTopics:[],strengths:[],notes:'',
+       topics:[{name:'Marketing',done:false},{name:'Finance',done:false},{name:'Operations',done:false},{name:'Human resources',done:false}]},
+    ],
+    missions:[
+      {id:1,text:'Complete a Maths worksheet on percentages',xp:10,done:false},
+      {id:2,text:'Write a timed English Language response',xp:10,done:false},
+      {id:3,text:'Revise Forces and Density in Science',xp:5,done:false},
+      {id:4,text:'Complete a past paper question for any subject',xp:20,done:false},
+      {id:5,text:'Create revision flashcards for weak topics',xp:5,done:false},
+      {id:6,text:'Correct all mistakes from last week',xp:5,done:false},
+      {id:7,text:'Boss Battle: Full science test',xp:50,done:false},
+    ],
+    achievements:[
+      {id:'xp_100',name:'First Century',desc:'Earn 100 XP total',icon:'💯',earned:false},
+      {id:'xp_500',name:'Scholar Rising',desc:'Earn 500 XP total',icon:'📚',earned:false},
+      {id:'xp_1000',name:'Master Learner',desc:'Earn 1000 XP total',icon:'🎓',earned:false},
+      {id:'xp_2000',name:'GCSE Champion',desc:'Earn 2000 XP total',icon:'👑',earned:false},
+      {id:'streak_3',name:'On a Roll',desc:'3-day streak',icon:'🔥',earned:false},
+      {id:'streak_7',name:'Unstoppable',desc:'7-day streak',icon:'⚡',earned:false},
+      {id:'first_mission',name:'First Mission',desc:'Complete first mission',icon:'🎯',earned:false},
+      {id:'all_missions',name:'Mission Complete',desc:'Finish all weekly missions',icon:'✅',earned:false},
+      {id:'boss_first',name:'Boss Slayer',desc:'Log first boss battle',icon:'⚔️',earned:false},
+      {id:'weak_cleared',name:'Weakness Destroyer',desc:'Clear all weak topics in a subject',icon:'💪',earned:false},
+    ],
+    bossResults:[],
+    xpHistory:[0],
+    resources:[],
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const KEY='ollys_gcse_v3';
+let S=null;
+try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){}
+if(!S)S=defaultState();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function getRank(xp){return RANKS.find(r=>xp>=r.min&&xp<=r.max)||RANKS[0];}
+function getNextRank(xp){return RANKS.find(r=>r.min>xp)||null;}
+function levelColor(l){return l>=8?'#22c55e':l>=5?'#eab308':'#ef4444';}
+function pct(score,max){return Math.round((score/max)*100);}
+let currentPage='dashboard';
+let subjectDetailId=null;
+let subjectDetailTab='overview';
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimer=null;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function h(tag,cls,html,attrs){
+  const el=document.createElement(tag);
+  if(cls)el.className=cls;
+  if(html!==undefined)el.innerHTML=html;
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==='style')el.style.cssText=v;else el[k]=v;});
+  return el;
+}
+function barHTML(current,max,color,height=8){
+  const p=Math.min(100,max>0?Math.round((current/max)*100):0);
+  return `<div class="bar-wrap" style="height:${height}px"><div class="bar-fill" style="width:${p}%;background:${color}"></div></div>`;
+}
+function badge(text,cls='badge-blue'){return `<span class="badge ${cls}">${text}</span>`;}
+
+// ═══════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════
+function renderSidebar(){
+  const nav=document.getElementById('nav');
+  nav.innerHTML='';
+  NAV_ITEMS.forEach(n=>{
+    const btn=document.createElement('button');
+    btn.className='nav-btn'+(currentPage===n.id?' active':'');
+    btn.innerHTML=`<span class="nav-icon">${n.icon}</span>${n.label}`;
+    btn.onclick=()=>navigate(n.id);
+    nav.appendChild(btn);
+  });
+  updateSidebarStats();
+}
+function updateSidebarStats(){
+  const rank=getRank(S.totalXP);
+  const next=getNextRank(S.totalXP);
+  document.getElementById('sb-rank').textContent=rank.icon+' '+rank.name;
+  document.getElementById('sb-rank').style.color=rank.color;
+  document.getElementById('sb-streak').textContent='🔥 '+S.streak+' day streak';
+  document.getElementById('sb-xp-label').textContent=S.totalXP+' XP';
+  const barEl=document.getElementById('sb-bar');
+  if(next){
+    const p=Math.min(100,Math.round(((S.totalXP-rank.min)/(next.min-rank.min))*100));
+    barEl.style.width=p+'%';barEl.style.background=rank.color;
+  } else {barEl.style.width='100%';barEl.style.background='#22c55e';}
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function navigate(page){
+  currentPage=page;subjectDetailId=null;subjectDetailTab='overview';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{b.classList.toggle('active',NAV_ITEMS[i].id===page);});
+  renderPage(page);
+}
+
+function renderPage(page){
+  const el=document.getElementById('page-'+page);
+  switch(page){
+    case 'dashboard': renderDashboard(el);break;
+    case 'subjects': renderSubjects(el);break;
+    case 'missions': renderMissions(el);break;
+    case 'boss': renderBoss(el);break;
+    case 'achievements': renderAchievements(el);break;
+    case 'calendar': renderCalendar(el);break;
+    case 'resources': renderResources(el);break;
+    case 'analytics': renderAnalytics(el);break;
+    case 'settings': renderSettings(el);break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard(el){
+  const rank=getRank(S.totalXP);
+  const next=getNextRank(S.totalXP);
+  const rankPct=next?Math.min(100,Math.round(((S.totalXP-rank.min)/(next.min-rank.min))*100)):100;
+  const quote=QUOTES[Math.floor(Date.now()/86400000)%QUOTES.length];
+  const doneMissions=S.missions.filter(m=>m.done).length;
+  const mXP=S.missions.filter(m=>m.done).reduce((s,m)=>s+m.xp,0);
+  const maxMXP=S.missions.reduce((s,m)=>s+m.xp,0);
+  const weakCount=S.subjects.reduce((s,subj)=>s+subj.weakTopics.length,0);
+
+  // XP sparkline
+  const maxXP=Math.max(...S.xpHistory);
+  const pts=S.xpHistory.map((v,i)=>{
+    const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;
+  }).join(' ');
+  const areaPath='M'+S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' L')+` L${30+7*(340/7)},80 L30,80 Z`;
+
+  // Subject bar chart
+  const barRows=S.subjects.map(s=>{
+    const w=Math.round((s.level/10)*100);
+    const c=levelColor(s.level);
+    return `<div class="chart-bar-row"><div class="chart-label">${s.emoji} ${s.name.split(' ')[0]}</div><div class="chart-bar-bg"><div class="chart-bar-inner" style="width:${w}%;background:${c}">${s.level}</div></div></div>`;
+  }).join('');
+
+  el.innerHTML=`
+  <div class="hero">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+      <div style="font-size:40px">${rank.icon}</div>
+      <div>
+        <div style="font-size:11px;color:${rank.color};font-weight:700;text-transform:uppercase;letter-spacing:1px">${rank.name}</div>
+        <div style="font-size:24px;font-weight:800;color:#fff">Welcome back, Olly!</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:#666;font-style:italic;margin-bottom:14px">"${quote}"</div>
+    ${next?`
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#444;margin-bottom:6px">
+      <span>${S.totalXP} XP</span>
+      <span>Next: ${next.icon} ${next.name} @ ${next.min} XP (${next.min-S.totalXP} to go)</span>
+    </div>
+    ${barHTML(S.totalXP-rank.min,next.min-rank.min,next.color,10)}`
+    :`<div style="color:#22c55e;font-weight:700;font-size:16px">👑 Maximum Rank — GCSE Champion!</div>`}
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-label">Total XP</div><div class="stat-value" style="color:#3b82f6">⚡ ${S.totalXP}</div><div class="stat-sub">Keep earning!</div></div>
+    <div class="stat-box"><div class="stat-label">Streak</div><div class="stat-value" style="color:#f97316">🔥 ${S.streak}d</div><div class="stat-sub">days active</div></div>
+    <div class="stat-box"><div class="stat-label">Missions</div><div class="stat-value" style="color:#22c55e">🎯 ${doneMissions}/${S.missions.length}</div><div class="stat-sub">+${mXP} XP earned</div></div>
+    <div class="stat-box"><div class="stat-label">Weak Topics</div><div class="stat-value" style="color:#ef4444">⚠️ ${weakCount}</div><div class="stat-sub">to work on</div></div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">XP Growth</div>
+      <svg viewBox="0 0 400 90" width="100%" class="line-chart">
+        <defs><linearGradient id="xpgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity=".3"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>
+        <path d="${areaPath}" fill="url(#xpgrad)"/>
+        <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>
+        ${S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return`<circle cx="${x}" cy="${y}" r="3" fill="#3b82f6"/>`;}).join('')}
+        ${S.xpHistory.map((v,i)=>{const x=30+i*(340/7);return`<text x="${x}" y="88" text-anchor="middle" fill="#444" font-size="9">W${i+1}</text>`;}).join('')}
+      </svg>
+    </div>
+    <div class="card">
+      <div class="card-title">Subject Levels</div>
+      <div class="chart-wrap">${barRows}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">This Week's Missions</div>
+    ${S.missions.slice(0,4).map(m=>`
+      <div class="mission-item ${m.done?'done':'todo'}" onclick="toggleMission(${m.id})">
+        <div class="checkbox ${m.done?'checked':'unchecked'}">${m.done?'✓':''}</div>
+        <span style="flex:1;color:${m.done?'#555':'#ccc'};text-decoration:${m.done?'line-through':'none'};font-size:13px">${m.text}</span>
+        ${badge('+'+m.xp+' XP','badge-blue')}
+      </div>`).join('')}
+    <button class="btn btn-gray" onclick="navigate('missions')" style="margin-top:8px;font-size:12px">View all missions →</button>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// SUBJECTS
+// ═══════════════════════════════════════════════════════
+function renderSubjects(el){
+  if(subjectDetailId){renderSubjectDetail(el);return;}
+  el.innerHTML=`<div class="page-title">Subjects</div><div class="page-sub">Click a subject to view details, add XP, and manage topics.</div>
+  <div class="grid-2">${S.subjects.map(s=>subjectCardHTML(s)).join('')}</div>`;
+  el.querySelectorAll('.subj-card').forEach(c=>{
+    c.onclick=()=>{subjectDetailId=c.dataset.id;subjectDetailTab='overview';renderSubjects(el);};
+  });
+}
+
+function subjectCardHTML(s){
+  const done=s.topics.filter(t=>t.done).length;
+  const c=levelColor(s.level);
+  return `<div class="card card-hover subj-card" data-id="${s.id}">
+    <div class="subj-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="subj-emoji">${s.emoji}</span>
+        <div><div class="subj-name">${s.name}</div><div class="subj-count">${done}/${s.topics.length} topics</div></div>
+      </div>
+      <div style="text-align:right"><div class="subj-level" style="color:${c}">L${s.level}</div><div style="font-size:10px;color:#555">${s.xp} XP</div></div>
+    </div>
+    ${barHTML(s.xp%200,200,c,6)}
+    <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+      ${s.weakTopics.length?badge(s.weakTopics.length+' weak','badge-red'):badge('All strong ✓','badge-green')}
+      ${s.strengths.slice(0,2).map(x=>badge(x,'badge-yellow')).join('')}
+    </div>
+  </div>`;
+}
+
+function renderSubjectDetail(el){
+  const s=S.subjects.find(x=>x.id===subjectDetailId);
+  const tabs=['overview','topics','notes','skill tree'];
+  const c=levelColor(s.level);
+  let tabContent='';
+  if(subjectDetailTab==='overview') tabContent=subjectOverviewHTML(s);
+  else if(subjectDetailTab==='topics') tabContent=subjectTopicsHTML(s);
+  else if(subjectDetailTab==='notes') tabContent=subjectNotesHTML(s);
+  else if(subjectDetailTab==='skill tree') tabContent=subjectSkillTreeHTML(s);
+
+  el.innerHTML=`
+  <button class="back-btn" onclick="subjectDetailId=null;renderSubjects(document.getElementById('page-subjects'))">← Back to Subjects</button>
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+    <span style="font-size:36px">${s.emoji}</span>
+    <div><div style="font-size:22px;font-weight:800;color:#fff">${s.name}</div>
+    <div style="color:${c};font-weight:700;font-size:15px">Level ${s.level} · ${s.xp} XP</div></div>
+  </div>
+  <div class="tabs">${tabs.map(t=>`<button class="tab ${t===subjectDetailTab?'active':'inactive'}" onclick="switchSubjectTab('${t}')">${t.charAt(0).toUpperCase()+t.slice(1)}</button>`).join('')}</div>
+  ${tabContent}`;
+  el.querySelectorAll('[data-topic]').forEach(el2=>{
+    el2.onclick=()=>toggleTopic(subjectDetailId,parseInt(el2.dataset.topic));
+  });
+}
+
+function switchSubjectTab(tab){
+  subjectDetailTab=tab;
+  renderSubjects(document.getElementById('page-subjects'));
+}
+
+function subjectOverviewHTML(s){
+  return `<div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">Weak Topics 🔴</div>
+      ${s.weakTopics.length?s.weakTopics.map(w=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;background:#0d0d0d;border-radius:6px;padding:6px 10px">
+        <span style="color:#ef4444;font-size:13px">• ${w}</span>
+        <button onclick="removeWeak('${s.id}','${w}')" style="color:#444;font-size:16px;cursor:pointer;line-height:1">×</button>
+      </div>`).join(''):`<div style="color:#22c55e;font-size:13px">No weak topics! 🎉</div>`}
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <input id="new-weak-${s.id}" class="form-input" placeholder="Add weak topic..." style="font-size:12px;padding:5px 8px" onkeydown="if(event.key==='Enter')addWeak('${s.id}')"/>
+        <button class="btn btn-red" style="padding:5px 10px;font-size:12px" onclick="addWeak('${s.id}')">+</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Strengths 🟢</div>
+      ${s.strengths.map(st=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;background:#0d0d0d;border-radius:6px;padding:6px 10px">
+        <span style="color:#22c55e;font-size:13px">• ${st}</span>
+        <button onclick="removeStrength('${s.id}','${st}')" style="color:#444;font-size:16px;cursor:pointer;line-height:1">×</button>
+      </div>`).join('')}
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <input id="new-str-${s.id}" class="form-input" placeholder="Add strength..." style="font-size:12px;padding:5px 8px" onkeydown="if(event.key==='Enter')addStrength('${s.id}')"/>
+        <button class="btn btn-green" style="padding:5px 10px;font-size:12px" onclick="addStrength('${s.id}')">+</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Earn XP</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <span style="font-size:13px;color:#aaa;width:100px">XP to L${s.level+1}</span>
+      ${barHTML(s.xp%200,200,levelColor(s.level),8)}
+      <span style="font-size:12px;color:#555;width:60px;text-align:right">${s.xp%200}/200</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-blue" onclick="earnXP('${s.id}',5,'Learned a topic! +5 XP')">+5 XP (Learn Topic)</button>
+      <button class="btn btn-green" onclick="earnXP('${s.id}',10,'Worksheet done! +10 XP')">+10 XP (Worksheet)</button>
+      <button class="btn btn-yellow" onclick="earnXP('${s.id}',5,'Mistake corrected! +5 XP')">+5 XP (Fix Mistake)</button>
+    </div>
+  </div>`;
+}
+
+function subjectTopicsHTML(s){
+  return `<div class="card"><div class="card-title">Topic Checklist</div>
+  ${s.topics.map((t,i)=>`
+    <div class="topic-item ${t.done?'done':'todo'}" data-topic="${i}">
+      <div class="checkbox ${t.done?'checked':'unchecked'}">${t.done?'✓':''}</div>
+      <span style="flex:1;color:${t.done?'#22c55e':'#ccc'};font-size:13px;text-decoration:${t.done?'line-through':'none'}">${t.name}</span>
+      ${s.weakTopics.includes(t.name)?badge('Weak','badge-red'):''}
+      ${!t.done?badge('+5 XP','badge-blue'):''}
+    </div>`).join('')}
+  </div>`;
+}
+
+function subjectNotesHTML(s){
+  return `<div class="card"><div class="card-title">Notes &amp; Revision</div>
+  <textarea id="notes-${s.id}" class="form-input" style="min-height:280px;resize:vertical;line-height:1.7;padding:12px" placeholder="Write notes for ${s.name} here...">${s.notes||''}</textarea>
+  <button class="btn btn-green" style="margin-top:10px" onclick="saveNotes('${s.id}')">Save Notes</button>
+  </div>`;
+}
+
+function subjectSkillTreeHTML(s){
+  const nodes=[1,2,3,4,5,6,7,8,9,10].map(lvl=>{
+    const done=lvl<=s.level;const cur=lvl===s.level+1;
+    const c=done?levelColor(s.level):cur?'#333':'#1a1a1a';
+    const tc=done?levelColor(s.level):cur?'#555':'#2a2a2a';
+    return `<div class="skill-node">
+      <div class="skill-circle" style="background:${done?levelColor(s.level)+'22':'#0a0a0a'};border:2px solid ${c};color:${tc}">${done?'✓':lvl}</div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:600;color:${done?'#aaa':cur?'#ccc':'#2a2a2a'}">Level ${lvl}</div>
+      <div style="font-size:10px;color:#333">${lvl*200} XP required</div></div>
+      ${done?badge('Unlocked','badge-green'):cur?badge('In Progress','badge-yellow'):''}
+    </div>`;
+  }).join('');
+  return `<div class="card"><div class="card-title">Skill Tree</div>${nodes}</div>`;
+}
+
+// Subject actions
+function earnXP(id,amount,msg){
+  const s=S.subjects.find(x=>x.id===id);
+  s.xp+=amount;s.level=Math.min(10,Math.floor(s.xp/200)+1);
+  S.totalXP+=amount;save();updateSidebarStats();
+  toast(msg);
+  checkAchievements();
+  renderSubjects(document.getElementById('page-subjects'));
+}
+function toggleTopic(id,i){
+  const s=S.subjects.find(x=>x.id===id);
+  const wasDone=s.topics[i].done;
+  s.topics[i].done=!wasDone;
+  if(!wasDone){s.xp+=5;s.level=Math.min(10,Math.floor(s.xp/200)+1);S.totalXP+=5;toast('Topic completed! +5 XP');}
+  save();updateSidebarStats();checkAchievements();
+  renderSubjects(document.getElementById('page-subjects'));
+}
+function removeWeak(id,w){const s=S.subjects.find(x=>x.id===id);s.weakTopics=s.weakTopics.filter(x=>x!==w);save();renderSubjects(document.getElementById('page-subjects'));}
+function addWeak(id){
+  const inp=document.getElementById('new-weak-'+id);
+  if(!inp||!inp.value.trim())return;
+  const s=S.subjects.find(x=>x.id===id);
+  s.weakTopics.push(inp.value.trim());save();renderSubjects(document.getElementById('page-subjects'));
+}
+function removeStrength(id,st){const s=S.subjects.find(x=>x.id===id);s.strengths=s.strengths.filter(x=>x!==st);save();renderSubjects(document.getElementById('page-subjects'));}
+function addStrength(id){
+  const inp=document.getElementById('new-str-'+id);
+  if(!inp||!inp.value.trim())return;
+  const s=S.subjects.find(x=>x.id===id);
+  s.strengths.push(inp.value.trim());save();renderSubjects(document.getElementById('page-subjects'));
+}
+function saveNotes(id){
+  const s=S.subjects.find(x=>x.id===id);
+  const ta=document.getElementById('notes-'+id);
+  if(ta){s.notes=ta.value;save();toast('Notes saved!');}
+}
+
+// ═══════════════════════════════════════════════════════
+// MISSIONS
+// ═══════════════════════════════════════════════════════
+function toggleMission(id){
+  const m=S.missions.find(x=>x.id===id);
+  if(!m.done){S.totalXP+=m.xp;toast('Mission complete! +'+m.xp+' XP');}
+  m.done=!m.done;save();updateSidebarStats();checkAchievements();
+  if(currentPage==='dashboard')renderDashboard(document.getElementById('page-dashboard'));
+  else if(currentPage==='missions')renderMissions(document.getElementById('page-missions'));
+}
+
+function renderMissions(el){
+  const done=S.missions.filter(m=>m.done).length;
+  const mXP=S.missions.filter(m=>m.done).reduce((s,m)=>s+m.xp,0);
+  const maxXP=S.missions.reduce((s,m)=>s+m.xp,0);
+  el.innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div><div class="page-title">Weekly Missions</div><div class="page-sub">Complete missions to earn XP</div></div>
+    <button class="btn btn-gray" onclick="resetMissions()">Reset Week</button>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#555;margin-bottom:8px">
+      <span>${done}/${S.missions.length} missions done</span><span>${mXP}/${maxXP} XP</span>
+    </div>
+    ${barHTML(mXP,maxXP,'#22c55e',10)}
+    ${done===S.missions.length?'<div style="margin-top:10px;color:#22c55e;font-weight:700">🎉 All missions complete! Brilliant work!</div>':''}
+  </div>
+  ${S.missions.map(m=>`
+    <div class="mission-item ${m.done?'done':'todo'}" onclick="toggleMission(${m.id})">
+      <div class="checkbox ${m.done?'checked':'unchecked'}">${m.done?'✓':''}</div>
+      <span style="flex:1;color:${m.done?'#555':'#ccc'};text-decoration:${m.done?'line-through':'none'};font-size:13px">${m.text}</span>
+      ${badge('+'+m.xp+' XP',m.xp>=50?'badge-yellow':m.xp>=20?'badge-yellow':'badge-blue')}
+    </div>`).join('')}`;
+}
+
+function resetMissions(){S.missions.forEach(m=>m.done=false);save();renderMissions(document.getElementById('page-missions'));toast('Missions reset for new week!');}
+
+// ═══════════════════════════════════════════════════════
+// BOSS BATTLES
+// ═══════════════════════════════════════════════════════
+function renderBoss(el){
+  const bySubj={};
+  S.bossResults.forEach(r=>{if(!bySubj[r.subject])bySubj[r.subject]=[];bySubj[r.subject].push(r);});
+
+  const resultsHTML=Object.entries(bySubj).map(([subj,results])=>{
+    const sorted=[...results].sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const rows=sorted.map(r=>{
+      const p=pct(r.score,r.max);const c=p>=80?'#22c55e':p>=60?'#eab308':'#ef4444';
+      return `<div class="boss-result">
+        <div><div style="font-size:12px;font-weight:600;color:#ccc">${r.name}</div><div style="font-size:10px;color:#444">${r.date}</div></div>
+        <div class="boss-score" style="color:${c}">${p}%</div>
+      </div>`;
+    }).join('');
+    // Mini sparkline
+    const maxS=Math.max(...sorted.map(r=>pct(r.score,r.max)),1);
+    const pts=sorted.map((r,i)=>{const x=20+i*(200/Math.max(sorted.length-1,1));const y=50-Math.round((pct(r.score,r.max)/100)*45);return x+','+y;}).join(' ');
+    const sparkline=sorted.length>1?`<svg viewBox="0 0 240 55" width="100%" style="opacity:.8">
+      <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2"/>
+      ${sorted.map((r,i)=>{const x=20+i*(200/Math.max(sorted.length-1,1));const y=50-Math.round((pct(r.score,r.max)/100)*45);const c=pct(r.score,r.max)>=80?'#22c55e':pct(r.score,r.max)>=60?'#eab308':'#ef4444';return`<circle cx="${x}" cy="${y}" r="4" fill="${c}"/>`;}).join('')}
+    </svg>`:''
+    return `<div class="card" style="margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:#ddd;margin-bottom:12px">${subj}</div>
+      <div class="grid-2">${rows}${sparkline}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <div><div class="page-title">⚔️ Boss Battles</div><div class="page-sub">Track test scores and see your improvement</div></div>
+    <button class="btn btn-blue" onclick="showBossForm()">+ Add Result</button>
+  </div>
+  <div id="boss-form" style="display:none;margin-bottom:20px">
+    <div class="card">
+      <div class="card-title">New Test Result (+50 XP)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <select id="boss-subj" class="form-input" style="font-size:12px">
+          ${S.subjects.map(s=>`<option>${s.name}</option>`).join('')}
+        </select>
+        <input id="boss-name" class="form-input" placeholder="Test name" style="font-size:12px"/>
+        <input id="boss-score" class="form-input" type="number" placeholder="Your score" style="font-size:12px"/>
+        <input id="boss-max" class="form-input" type="number" placeholder="Max score" value="100" style="font-size:12px"/>
+      </div>
+      <button class="btn btn-green" onclick="saveBossResult()">Save +50 XP</button>
+      <button class="btn btn-gray" style="margin-left:8px" onclick="document.getElementById('boss-form').style.display='none'">Cancel</button>
+    </div>
+  </div>
+  ${resultsHTML||'<div style="color:#333;text-align:center;padding:40px">No boss battles yet. Add a test result to get started!</div>'}`;
+}
+
+function showBossForm(){document.getElementById('boss-form').style.display='block';}
+function saveBossResult(){
+  const subj=document.getElementById('boss-subj').value;
+  const name=document.getElementById('boss-name').value;
+  const score=parseInt(document.getElementById('boss-score').value)||0;
+  const max=parseInt(document.getElementById('boss-max').value)||100;
+  if(!name)return;
+  S.bossResults.push({id:Date.now(),subject:subj,name,score,max,date:new Date().toISOString().split('T')[0]});
+  S.totalXP+=50;save();updateSidebarStats();checkAchievements();
+  toast('Boss Battle logged! +50 XP');
+  renderBoss(document.getElementById('page-boss'));
+}
+
+// ═══════════════════════════════════════════════════════
+// ACHIEVEMENTS
+// ═══════════════════════════════════════════════════════
+function checkAchievements(){
+  S.achievements.forEach(a=>{
+    if(a.earned)return;
+    let earn=false;
+    if(a.id==='xp_100'&&S.totalXP>=100)earn=true;
+    if(a.id==='xp_500'&&S.totalXP>=500)earn=true;
+    if(a.id==='xp_1000'&&S.totalXP>=1000)earn=true;
+    if(a.id==='xp_2000'&&S.totalXP>=2000)earn=true;
+    if(a.id==='streak_3'&&S.streak>=3)earn=true;
+    if(a.id==='streak_7'&&S.streak>=7)earn=true;
+    if(a.id==='first_mission'&&S.missions.some(m=>m.done))earn=true;
+    if(a.id==='all_missions'&&S.missions.every(m=>m.done))earn=true;
+    if(a.id==='boss_first'&&S.bossResults.length>0)earn=true;
+    if(a.id==='weak_cleared'&&S.subjects.some(s=>s.weakTopics.length===0))earn=true;
+    if(earn){a.earned=true;toast('🏆 Achievement unlocked: '+a.name+'!');}
+  });
+  save();
+}
+
+function renderAchievements(el){
+  const earned=S.achievements.filter(a=>{
+    if(a.earned)return true;
+    if(a.id==='xp_100'&&S.totalXP>=100)return true;
+    if(a.id==='xp_500'&&S.totalXP>=500)return true;
+    if(a.id==='xp_1000'&&S.totalXP>=1000)return true;
+    if(a.id==='xp_2000'&&S.totalXP>=2000)return true;
+    if(a.id==='streak_3'&&S.streak>=3)return true;
+    if(a.id==='streak_7'&&S.streak>=7)return true;
+    if(a.id==='first_mission'&&S.missions.some(m=>m.done))return true;
+    if(a.id==='all_missions'&&S.missions.every(m=>m.done))return true;
+    if(a.id==='boss_first'&&S.bossResults.length>0)return true;
+    if(a.id==='weak_cleared'&&S.subjects.some(s=>s.weakTopics.length===0))return true;
+    return false;
+  }).length;
+
+  el.innerHTML=`<div class="page-title">🏆 Achievements</div>
+  <div style="font-size:13px;color:#555;margin-bottom:16px">${earned}/${S.achievements.length} unlocked</div>
+  <div class="card" style="margin-bottom:20px">
+    ${barHTML(earned,S.achievements.length,'#f59e0b',10)}
+    <div style="font-size:12px;color:#444;margin-top:8px">${S.achievements.length-earned} achievements remaining</div>
+  </div>
+  <div class="grid-3">${S.achievements.map(a=>{
+    const unlocked=a.earned||(a.id==='xp_100'&&S.totalXP>=100)||(a.id==='xp_500'&&S.totalXP>=500)||(a.id==='xp_1000'&&S.totalXP>=1000)||(a.id==='xp_2000'&&S.totalXP>=2000)||(a.id==='streak_3'&&S.streak>=3)||(a.id==='streak_7'&&S.streak>=7)||(a.id==='first_mission'&&S.missions.some(m=>m.done))||(a.id==='all_missions'&&S.missions.every(m=>m.done))||(a.id==='boss_first'&&S.bossResults.length>0)||(a.id==='weak_cleared'&&S.subjects.some(s=>s.weakTopics.length===0));
+    return `<div class="ach-card ${unlocked?'earned':''}">
+      <span class="ach-icon ${unlocked?'':'locked'}">${a.icon}</span>
+      <div class="ach-name" style="color:${unlocked?'#22c55e':'#333'}">${a.name}</div>
+      <div class="ach-desc">${a.desc}</div>
+      ${unlocked?`<div style="margin-top:8px">${badge('Unlocked ✓','badge-green')}</div>`:''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════
+function renderCalendar(el){
+  const grid=TIMETABLE.map(({day,periods})=>`
+    <div>
+      <div class="cal-day-header">${day}</div>
+      ${periods.map(p=>{
+        const c=SUBJ_COLORS[p.subject]||'#555';
+        return `<div class="cal-period" style="background:${c}14;border:1px solid ${c}33">
+          <div class="cal-time">${p.time}</div>
+          <div class="cal-subj" style="color:${c}">${p.subject}</div>
+          <div class="cal-room">${p.room}</div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+  el.innerHTML=`<div class="page-title">📅 Weekly Timetable</div>
+  <div style="margin-bottom:16px;font-size:13px;color:#555">Your school week at a glance</div>
+  <div class="scroll-x"><div class="cal-grid">${grid}</div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// RESOURCES
+// ═══════════════════════════════════════════════════════
+function renderResources(el){
+  const typeIcons={Notes:'📝',Worksheet:'📄','Past Paper':'📋',Video:'🎬',Website:'🌐',Flashcards:'🃏'};
+  const items=S.resources.map(r=>{
+    const c=SUBJ_COLORS[r.subject]||'#555';
+    return `<div class="res-item">
+      <span style="font-size:18px">${typeIcons[r.type]||'📁'}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:#ddd">${r.name}</div><div style="font-size:11px;color:#444">${r.date}</div></div>
+      <span class="badge" style="background:${c}14;color:${c}">${r.subject.split(' ')[0]}</span>
+      ${badge(r.type,'badge-gray')}
+      ${r.url?`<a href="${r.url}" target="_blank" style="font-size:11px;color:#3b82f6">Open ↗</a>`:''}
+      <button onclick="removeResource(${r.id})" style="color:#333;font-size:18px;cursor:pointer;line-height:1">×</button>
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div class="page-title">📂 Resources</div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">Add Resource</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <input id="res-name" class="form-input" placeholder="Resource name" style="font-size:12px"/>
+      <select id="res-subj" class="form-input" style="font-size:12px">${S.subjects.map(s=>`<option>${s.name}</option>`).join('')}</select>
+      <select id="res-type" class="form-input" style="font-size:12px">${['Notes','Worksheet','Past Paper','Video','Website','Flashcards'].map(t=>`<option>${t}</option>`).join('')}</select>
+    </div>
+    <div style="display:flex;gap:10px">
+      <input id="res-url" class="form-input" placeholder="URL or description (optional)" style="font-size:12px;flex:1"/>
+      <button class="btn btn-blue" onclick="addResource()">Add Resource</button>
+    </div>
+  </div>
+  ${items||'<div style="color:#333;text-align:center;padding:40px;font-size:13px">No resources yet. Add your notes, worksheets and links above.</div>'}`;
+}
+
+function addResource(){
+  const name=document.getElementById('res-name').value.trim();
+  if(!name)return;
+  S.resources.push({id:Date.now(),name,subject:document.getElementById('res-subj').value,type:document.getElementById('res-type').value,url:document.getElementById('res-url').value,date:new Date().toLocaleDateString()});
+  save();toast('Resource added!');renderResources(document.getElementById('page-resources'));
+}
+function removeResource(id){S.resources=S.resources.filter(r=>r.id!==id);save();renderResources(document.getElementById('page-resources'));}
+
+// ═══════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════
+function renderAnalytics(el){
+  const maxXP=Math.max(...S.xpHistory);
+  const pts=S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' ');
+  const area='M'+S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' L')+` L${30+7*(340/7)},80 L30,80 Z`;
+
+  const subjBars=S.subjects.map(s=>{const w=Math.round((s.level/10)*100);const c=levelColor(s.level);return `<div class="chart-bar-row"><div class="chart-label">${s.emoji} ${s.name.split(' ')[0]}</div><div class="chart-bar-bg"><div class="chart-bar-inner" style="width:${w}%;background:${c}">${s.level}</div></div></div>`;}).join('');
+
+  const bossBars=S.bossResults.slice(-8).map(r=>{const p=pct(r.score,r.max);const c=p>=80?'#22c55e':p>=60?'#eab308':'#ef4444';return `<div class="chart-bar-row"><div class="chart-label" style="width:90px">${r.name.substring(0,12)}</div><div class="chart-bar-bg"><div class="chart-bar-inner" style="width:${p}%;background:${c}">${p}%</div></div></div>`;}).join('');
+
+  const weakAll=S.subjects.filter(s=>s.weakTopics.length).flatMap(s=>s.weakTopics.map(w=>({w,s:s.name})));
+
+  el.innerHTML=`<div class="page-title">📊 Analytics</div>
+  <div style="margin-bottom:20px;font-size:13px;color:#555">Your learning data visualised</div>
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="card-title">XP Growth Over Time</div>
+      <svg viewBox="0 0 400 95" width="100%">
+        <defs><linearGradient id="g2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity=".4"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>
+        <path d="${area}" fill="url(#g2)"/>
+        <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2"/>
+        ${S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return`<circle cx="${x}" cy="${y}" r="4" fill="#3b82f6"/><text x="${x}" y="${y-6}" text-anchor="middle" fill="#555" font-size="8">${v}</text>`;}).join('')}
+        ${S.xpHistory.map((v,i)=>{const x=30+i*(340/7);return`<text x="${x}" y="92" text-anchor="middle" fill="#444" font-size="9">W${i+1}</text>`;}).join('')}
+      </svg>
+    </div>
+    <div class="card"><div class="card-title">Subject Levels</div><div class="chart-wrap">${subjBars}</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="card-title">Test Score History</div><div class="chart-wrap">${bossBars||'<div style="color:#333;font-size:12px;padding:20px 0;text-align:center">No test results yet</div>'}</div></div>
+    <div class="card"><div class="card-title">Weak Topics (${weakAll.length})</div>
+      ${weakAll.length?weakAll.map(x=>{const c=SUBJ_COLORS[x.s.split(' ')[0]]||'#555';return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:#0d0d0d;border-radius:6px;margin-bottom:5px"><span style="color:#ef4444;font-size:12px">• ${x.w}</span><span class="badge" style="background:${c}14;color:${c};font-size:10px">${x.s.split(' ')[0]}</span></div>`;}).join(''):'<div style="color:#22c55e;font-size:13px;text-align:center;padding:30px">No weak topics! Smashing it! 🎉</div>'}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════
+function renderSettings(el){
+  el.innerHTML=`<div class="page-title">⚙️ Settings</div>
+  <div id="settings-msg" style="display:none;padding:10px 14px;background:#061a0e;border:1px solid #0f3020;border-radius:8px;color:#22c55e;font-size:13px;margin-bottom:16px"></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Data Management</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-blue" onclick="exportData()">📤 Export Data</button>
+      <label class="btn btn-green" style="display:inline-block">📥 Import Data<input type="file" accept=".json" onchange="importData(event)" style="display:none"/></label>
+      <button class="btn btn-red" onclick="resetAll()">🗑️ Reset All Progress</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Debug — Add XP</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${[5,10,20,50,100,200].map(n=>`<button class="btn btn-blue" onclick="addXPDebug(${n})">+${n} XP</button>`).join('')}
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">XP System Reference</div>
+    ${[['Learn a topic','5 XP'],['Complete a worksheet','10 XP'],['Correct a mistake','5 XP'],['Weekly mission','20 XP'],['Boss Battle test','50 XP']].map(([a,x])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #111;font-size:13px;color:#888"><span>${a}</span>${badge(x,'badge-blue')}</div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="card-title">Rank System</div>
+    ${RANKS.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #111">
+      <span style="font-size:20px;width:28px">${r.icon}</span>
+      <span style="font-weight:700;color:${r.color};font-size:13px;width:130px">${r.name}</span>
+      <span style="font-size:12px;color:#444">${r.min}${r.max===9999?'+':' – '+r.max} XP</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+function settingsMsg(msg){const el=document.getElementById('settings-msg');if(el){el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',3000);}}
+function exportData(){
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ollys-gcse-backup.json';a.click();
+  settingsMsg('✅ Data exported!');
+}
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{try{S=JSON.parse(ev.target.result);save();updateSidebarStats();settingsMsg('✅ Data imported!');renderSettings(document.getElementById('page-settings'));}catch{settingsMsg('❌ Error: Invalid file');}};
+  reader.readAsText(file);
+}
+function resetAll(){if(confirm('Reset ALL progress? This cannot be undone!')){S=defaultState();save();updateSidebarStats();settingsMsg('Progress reset.');renderSettings(document.getElementById('page-settings'));}}
+function addXPDebug(n){S.totalXP+=n;save();updateSidebarStats();checkAchievements();settingsMsg('+'+n+' XP added!');toast('+'+n+' XP added!');}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+function init(){
+  renderSidebar();
+  checkAchievements();
+  navigate('dashboard');
+}
+init();
+</script>
+</body>
+</html>

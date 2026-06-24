@@ -957,7 +957,7 @@ function renderBoss(el){
         <div style="flex:1">
           <div style="font-weight:700;color:${unlocked?'#ddd':'#333'};font-size:13px">${b.name}</div>
           <div style="font-size:11px;color:#444;margin-top:2px">${b.description}</div>
-          <div style="font-size:10px;color:#333;margin-top:3px">Requires Level ${b.levelRequired} · ${b.questions.length} questions · +50 XP</div>
+          <div style="font-size:10px;color:#333;margin-top:3px">Requires Level ${b.levelRequired} · +50 XP</div>
         </div>
         ${bestPct!==null?`<div style="text-align:right;margin-right:8px"><div style="font-size:13px;font-weight:700;color:${beatColor}">Best: ${bestPct}%</div><div style="font-size:10px;color:#444">${pastAttempts.length} attempt${pastAttempts.length!==1?'s':''}</div></div>`:''}
         ${unlocked

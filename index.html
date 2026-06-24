@@ -683,66 +683,421 @@ function resetMissions(){S.missions.forEach(m=>m.done=false);save();renderMissio
 // ═══════════════════════════════════════════════════════
 // BOSS BATTLES
 // ═══════════════════════════════════════════════════════
-function renderBoss(el){
-  const bySubj={};
-  S.bossResults.forEach(r=>{if(!bySubj[r.subject])bySubj[r.subject]=[];bySubj[r.subject].push(r);});
 
-  const resultsHTML=Object.entries(bySubj).map(([subj,results])=>{
-    const sorted=[...results].sort((a,b)=>new Date(a.date)-new Date(b.date));
-    const rows=sorted.map(r=>{
-      const p=pct(r.score,r.max);const c=p>=80?'#22c55e':p>=60?'#eab308':'#ef4444';
-      return `<div class="boss-result">
-        <div><div style="font-size:12px;font-weight:600;color:#ccc">${r.name}</div><div style="font-size:10px;color:#444">${r.date}</div></div>
-        <div class="boss-score" style="color:${c}">${p}%</div>
+// Boss definitions per subject: { levelRequired, name, description, icon, questions[] }
+const BOSS_DEFS = {
+  'eng-lang': [
+    { levelRequired:2, name:'The Language Lair', icon:'🐉', description:'Identify language techniques in an unseen extract.',
+      questions:[
+        {q:'What technique is used in: "The moon wept silver tears"?', options:['Personification','Simile','Alliteration','Hyperbole'], answer:0},
+        {q:'Which word class is "rapidly"?', options:['Adjective','Noun','Adverb','Verb'], answer:2},
+        {q:'What effect does short sentences create?', options:['Confusion','Pace and tension','Relaxation','Humour'], answer:1},
+        {q:'"As cold as ice" is an example of:', options:['Metaphor','Simile','Personification','Oxymoron'], answer:1},
+        {q:'What is the purpose of a rhetorical question?', options:['To get an answer','To engage the reader','To describe a scene','To show emotion'], answer:1},
+      ]},
+    { levelRequired:5, name:'The Writer\'s Dungeon', icon:'🧙', description:'Analyse the effect of writers\' choices.',
+      questions:[
+        {q:'What does "semantic field" mean?', options:['Words related to one theme','A type of sentence','A punctuation mark','A paragraph structure'], answer:0},
+        {q:'Which is a structural technique?', options:['Metaphor','Circular narrative','Alliteration','Personification'], answer:1},
+        {q:'"The door creaked open" — what technique?', options:['Onomatopoeia','Simile','Hyperbole','Irony'], answer:0},
+        {q:'What does "juxtaposition" mean?', options:['Repeating words','Placing opposites together','Exaggeration','Addressing the reader'], answer:1},
+        {q:'An "unreliable narrator" is one who:', options:['Speaks loudly','Cannot be fully trusted','Always tells the truth','Is very young'], answer:1},
+      ]},
+    { levelRequired:8, name:'The GCSE Titan', icon:'👑', description:'Master-level language analysis.',
+      questions:[
+        {q:'What is a "pathetic fallacy"?', options:['A character\'s mistake','Weather reflecting mood','Exaggerated emotion','A false argument'], answer:1},
+        {q:'What is the effect of a first-person narrator?', options:['More distance','Feels more intimate and subjective','Less detail','Only facts presented'], answer:1},
+        {q:'Which is NOT a feature of persuasive writing?', options:['Rule of three','Rhetorical questions','Rhyme scheme','Emotive language'], answer:2},
+        {q:'What is "syndetic listing"?', options:['A list without conjunctions','A list with conjunctions like "and"','A numbered list','A list of verbs'], answer:1},
+        {q:'What does "volta" mean in poetry?', options:['A type of rhyme','A turn or shift in argument/mood','The final couplet','The opening line'], answer:1},
+      ]},
+  ],
+  'eng-lit': [
+    { levelRequired:2, name:'The Plot Phantom', icon:'👻', description:'Test your knowledge of key texts.',
+      questions:[
+        {q:'Who wrote "An Inspector Calls"?', options:['Arthur Miller','J.B. Priestley','Charles Dickens','Shakespeare'], answer:1},
+        {q:'In Macbeth, who is killed first?', options:['Banquo','Duncan','Macduff','Lady Macbeth'], answer:1},
+        {q:'What year is "An Inspector Calls" set in?', options:['1912','1945','1939','1900'], answer:0},
+        {q:'Lady Macbeth says "Out damned ___!"', options:['Villain','Spot','Ghost','Blood'], answer:1},
+        {q:'Sheila Birling is engaged to:', options:['Eric','Gerald Croft','Inspector Goole','Alderman Meggarty'], answer:1},
+      ]},
+    { levelRequired:5, name:'The Theme Wraith', icon:'🌑', description:'Deeper analysis of themes and characters.',
+      questions:[
+        {q:'What theme does the Inspector represent in AIC?', options:['Love','Social responsibility','War','Family'], answer:1},
+        {q:'Macbeth\'s tragic flaw is:', options:['Cowardice','Ambition','Laziness','Jealousy'], answer:1},
+        {q:'Which poetic form is a Shakespearean sonnet?', options:['14 lines, ABAB rhyme','Free verse','Ballad','Haiku'], answer:0},
+        {q:'What does the "dagger" represent for Macbeth?', options:['His courage','His guilt and ambition','His friendship','His family'], answer:1},
+        {q:'Eva Smith/Daisy Renton represents:', options:['The upper class','The exploited working class','The government','Women\'s rights only'], answer:1},
+      ]},
+    { levelRequired:8, name:'The Literature Colossus', icon:'👑', description:'A-grade level literary analysis.',
+      questions:[
+        {q:'What is the dramatic irony in AIC\'s 1912 setting?', options:['The audience knows WW1 happened','The inspector is mysterious','Birling is rich','Eva Smith is poor'], answer:0},
+        {q:'"Fair is foul, foul is fair" is an example of:', options:['Simile','Oxymoron/chiasmus','Metaphor','Alliteration'], answer:1},
+        {q:'Priestley\'s main message in AIC is:', options:['Family is important','Society must care for all people','War is wrong','Money brings happiness'], answer:1},
+        {q:'What is a "hamartia"?', options:['A type of poem','A tragic hero\'s fatal flaw','A plot twist','A metaphor'], answer:1},
+        {q:'The witches in Macbeth represent:', options:['Good fortune','Fate and temptation','Friendship','Scotland\'s future'], answer:1},
+      ]},
+  ],
+  'maths': [
+    { levelRequired:2, name:'The Number Goblin', icon:'👺', description:'Basic number skills test.',
+      questions:[
+        {q:'What is 15% of 200?', options:['25','30','35','20'], answer:1},
+        {q:'What is 3² + 4²?', options:['14','25','49','12'], answer:1},
+        {q:'Simplify 18/24', options:['2/3','3/4','4/5','1/2'], answer:1},
+        {q:'What is the HCF of 12 and 18?', options:['3','4','6','9'], answer:2},
+        {q:'Round 3.678 to 2 decimal places:', options:['3.67','3.68','3.7','3.6'], answer:1},
+      ]},
+    { levelRequired:4, name:'The Algebra Ogre', icon:'🧌', description:'Algebra and equations challenge.',
+      questions:[
+        {q:'Solve: 3x + 7 = 22', options:['x=4','x=5','x=3','x=6'], answer:1},
+        {q:'Expand: 3(2x - 4)', options:['6x-4','6x-12','3x-12','6x-7'], answer:1},
+        {q:'What is the gradient of y = 3x + 2?', options:['2','3','1','5'], answer:1},
+        {q:'Factorise: x² + 5x + 6', options:['(x+2)(x+3)','(x+1)(x+6)','(x+3)(x+2)','(x-2)(x-3)'], answer:0},
+        {q:'If y = 2x² and x = 3, what is y?', options:['12','18','36','6'], answer:1},
+      ]},
+    { levelRequired:6, name:'The Geometry Dragon', icon:'🐲', description:'Geometry and trigonometry boss.',
+      questions:[
+        {q:'Area of a circle with radius 5 (use π≈3.14):', options:['78.5','31.4','25','15.7'], answer:0},
+        {q:'What is sin(30°)?', options:['0.5','√2/2','√3/2','1'], answer:0},
+        {q:'Angles in a triangle sum to:', options:['180°','360°','90°','270°'], answer:0},
+        {q:'Pythagoras: a²+b²=c². If a=3,b=4, c=?', options:['5','6','7','25'], answer:0},
+        {q:'Volume of a cuboid 3×4×5:', options:['60','47','35','12'], answer:0},
+      ]},
+    { levelRequired:8, name:'The Maths Titan', icon:'👑', description:'GCSE-level master challenge.',
+      questions:[
+        {q:'What is the nth term of: 3, 7, 11, 15...?', options:['4n-1','4n+1','3n+1','n+4'], answer:0},
+        {q:'Solve x²-5x+6=0:', options:['x=2,x=3','x=1,x=6','x=-2,x=-3','x=5,x=1'], answer:0},
+        {q:'What is 2³ × 2⁴?', options:['2⁷','2¹²','4⁷','2⁸'], answer:0},
+        {q:'The equation of a circle centre (0,0) radius 4:', options:['x²+y²=16','x²+y²=4','x+y=4','x²+y²=8'], answer:0},
+        {q:'If tan θ = 1, what is θ?', options:['30°','60°','45°','90°'], answer:2},
+      ]},
+  ],
+  'science': [
+    { levelRequired:2, name:'The Cell Creeper', icon:'🦠', description:'Basic biology and chemistry test.',
+      questions:[
+        {q:'What is the powerhouse of the cell?', options:['Nucleus','Mitochondria','Ribosome','Cell membrane'], answer:1},
+        {q:'What gas do plants absorb for photosynthesis?', options:['Oxygen','Nitrogen','Carbon dioxide','Hydrogen'], answer:2},
+        {q:'What is the chemical symbol for water?', options:['HO','H2O','H2O2','OH'], answer:1},
+        {q:'What force pulls objects toward Earth?', options:['Magnetism','Gravity','Friction','Tension'], answer:1},
+        {q:'What is the unit of force?', options:['Joule','Watt','Newton','Pascal'], answer:2},
+      ]},
+    { levelRequired:4, name:'The Physics Phantom', icon:'⚡', description:'Forces, density and energy challenge.',
+      questions:[
+        {q:'Density = mass ÷ ___', options:['Weight','Volume','Area','Speed'], answer:1},
+        {q:'If mass=50kg, volume=10m³, density=?', options:['500','5','0.2','40'], answer:1},
+        {q:'What is the unit of energy?', options:['Watt','Newton','Joule','Volt'], answer:2},
+        {q:'Speed = distance ÷ ___', options:['Mass','Time','Force','Area'], answer:1},
+        {q:'Which has more density: 1kg of iron or 1kg of feathers?', options:['Iron','Feathers','Same density','Depends on temperature'], answer:2},
+      ]},
+    { levelRequired:6, name:'The Chemistry Colossus', icon:'⚗️', description:'Chemical reactions and bonding.',
+      questions:[
+        {q:'What type of bond involves sharing electrons?', options:['Ionic','Covalent','Metallic','Hydrogen'], answer:1},
+        {q:'pH below 7 is:', options:['Alkali','Neutral','Acid','Base'], answer:2},
+        {q:'What is produced in neutralisation?', options:['An acid','Salt and water','A gas','A base'], answer:1},
+        {q:'Chemical formula of carbon dioxide:', options:['CO','CO2','C2O','C2O2'], answer:1},
+        {q:'What is oxidation?', options:['Loss of electrons','Gain of electrons','Loss of protons','Gain of neutrons'], answer:0},
+      ]},
+    { levelRequired:8, name:'The Science Titan', icon:'👑', description:'GCSE master science challenge.',
+      questions:[
+        {q:'What is the equation for photosynthesis?', options:['CO2+H2O→glucose+O2','O2+glucose→CO2+H2O','H2O+O2→glucose','CO2+O2→H2O+glucose'], answer:0},
+        {q:'What is the half-life of a radioactive substance?', options:['Time to fully decay','Time for half the atoms to decay','Time to become stable','Time to double'], answer:1},
+        {q:'Ohm\'s Law states V=?', options:['I/R','IR','I+R','I-R'], answer:1},
+        {q:'What happens at the anode in electrolysis?', options:['Reduction','Oxidation','Neutralisation','Precipitation'], answer:1},
+        {q:'What is the atomic number of Carbon?', options:['12','6','8','14'], answer:1},
+      ]},
+  ],
+  'jewish': [
+    { levelRequired:2, name:'The Torah Guardian', icon:'📜', description:'Basic Jewish knowledge test.',
+      questions:[
+        {q:'How many books are in the Torah?', options:['3','5','7','10'], answer:1},
+        {q:'When does Shabbat begin?', options:['Sunday morning','Friday at nightfall','Saturday morning','Thursday evening'], answer:1},
+        {q:'What does "Shalom" mean?', options:['Hello','Peace','Goodbye','Blessing'], answer:1},
+        {q:'What is the Jewish New Year called?', options:['Yom Kippur','Pesach','Rosh Hashanah','Sukkot'], answer:2},
+        {q:'How many commandments are there?', options:['10','100','613','7'], answer:2},
+      ]},
+    { levelRequired:5, name:'The Halachic Hydra', icon:'🐍', description:'Jewish law and practice challenge.',
+      questions:[
+        {q:'What does "Kosher" mean?', options:['Blessed','Fit/permitted','Holy','Sacred'], answer:1},
+        {q:'Which festival celebrates the Exodus from Egypt?', options:['Sukkot','Chanukah','Pesach','Purim'], answer:2},
+        {q:'What is the Talmud?', options:['The Torah scroll','Rabbinic discussions of Jewish law','A prayer book','A festival calendar'], answer:1},
+        {q:'Yom Kippur is the Day of:', options:['Joy','Remembrance','Atonement','Creation'], answer:2},
+        {q:'What is a "mezuzah"?', options:['A prayer shawl','A scroll on the doorpost','A Shabbat candle','A Torah pointer'], answer:1},
+      ]},
+    { levelRequired:8, name:'The Rabbi Titan', icon:'👑', description:'Advanced Jewish studies challenge.',
+      questions:[
+        {q:'What is the Mishnah?', options:['The written Torah','The first written Oral Law','A festival prayer','A Kabbalistic text'], answer:1},
+        {q:'Who wrote the Shulchan Aruch?', options:['Maimonides','Rashi','Joseph Karo','Rabbi Akiva'], answer:2},
+        {q:'What is "Teshuvah"?', options:['Prayer','Repentance/return','Study','Charity'], answer:1},
+        {q:'What does "Tzedakah" literally mean?', options:['Charity','Justice/righteousness','Prayer','Faith'], answer:1},
+        {q:'The Amidah contains how many blessings?', options:['7','10','18/19','13'], answer:2},
+      ]},
+  ],
+  'art': [
+    { levelRequired:2, name:'The Colour Creature', icon:'🎨', description:'Basic art knowledge test.',
+      questions:[
+        {q:'What are the primary colours?', options:['Red, green, blue','Red, yellow, blue','Orange, green, purple','Black, white, grey'], answer:1},
+        {q:'What does "shading" create the illusion of?', options:['Colour','3D form and depth','Texture only','Pattern'], answer:1},
+        {q:'What is a "still life"?', options:['A landscape','A drawing of objects','A portrait','An abstract piece'], answer:1},
+        {q:'Mixing red and blue makes:', options:['Green','Orange','Purple','Brown'], answer:2},
+        {q:'What is a "sketch"?', options:['A finished artwork','A quick rough drawing','A print','A sculpture'], answer:1},
+      ]},
+    { levelRequired:5, name:'The Technique Troll', icon:'🧌', description:'Art techniques and artists challenge.',
+      questions:[
+        {q:'Who painted the Mona Lisa?', options:['Picasso','Michelangelo','Leonardo da Vinci','Van Gogh'], answer:2},
+        {q:'What movement did Picasso create?', options:['Impressionism','Cubism','Surrealism','Realism'], answer:1},
+        {q:'What is "impasto" technique?', options:['Thin washes of paint','Thick textured paint','Pencil hatching','Watercolour blending'], answer:1},
+        {q:'What is "negative space"?', options:['Dark colours','Space around the subject','Empty canvas','Black paint'], answer:1},
+        {q:'"The Starry Night" was painted by:', options:['Monet','Picasso','Van Gogh','Dali'], answer:2},
+      ]},
+    { levelRequired:8, name:'The Art Titan', icon:'👑', description:'Advanced art and design challenge.',
+      questions:[
+        {q:'What is "chiaroscuro"?', options:['A colour technique','Contrast of light and dark','A sculpting method','A printing technique'], answer:1},
+        {q:'Who is known for the "Campbell\'s Soup Cans"?', options:['Roy Lichtenstein','Andy Warhol','Jackson Pollock','Mark Rothko'], answer:1},
+        {q:'What is "tenebrism"?', options:['Extreme chiaroscuro with dramatic dark','A Cubist style','Impressionist brushwork','Abstract expressionism'], answer:0},
+        {q:'Complementary colours are:', options:['Next to each other on the colour wheel','Opposite on the colour wheel','Both primary','Both secondary'], answer:1},
+        {q:'"Action painting" is associated with:', options:['Monet','Jackson Pollock','Dali','Warhol'], answer:1},
+      ]},
+  ],
+  'woodtech': [
+    { levelRequired:2, name:'The Timber Troll', icon:'🪵', description:'Basic materials and tools test.',
+      questions:[
+        {q:'What is hardwood from?', options:['Pine trees','Deciduous trees','Softwood trees','Synthetic materials'], answer:1},
+        {q:'What tool is used to measure right angles?', options:['Ruler','Try square','Compass','Protractor'], answer:1},
+        {q:'What does "MDF" stand for?', options:['Metal Design Frame','Medium Density Fibreboard','Modern Design Finish','Multi-Dense Format'], answer:1},
+        {q:'Which joint uses wooden pegs?', options:['Butt joint','Dowel joint','Mortise and tenon','Dovetail'], answer:1},
+        {q:'What is the purpose of sandpaper?', options:['Cutting','Smoothing surfaces','Joining','Measuring'], answer:1},
+      ]},
+    { levelRequired:5, name:'The Joinery Juggernaut', icon:'🔨', description:'Joints, finishes and processes.',
+      questions:[
+        {q:'Which joint is the strongest for corners?', options:['Butt joint','Dovetail joint','Lap joint','Biscuit joint'], answer:1},
+        {q:'What is a "tenon"?', options:['A type of saw','The protruding part of a mortise joint','A wood finish','A measuring tool'], answer:1},
+        {q:'What finish protects wood outdoors?', options:['Wax','Varnish or oil','Paint only','Sandpaper'], answer:1},
+        {q:'What does CAD stand for?', options:['Computer Aided Design','Creative Art Drawing','Computer Art Design','Craft And Design'], answer:0},
+        {q:'What is "grain" in wood?', options:['The colour','The pattern of fibres','The weight','The hardness'], answer:1},
+      ]},
+    { levelRequired:8, name:'The Craft Titan', icon:'👑', description:'Advanced Design Technology challenge.',
+      questions:[
+        {q:'What is a "prototype"?', options:['A final product','An early test model','A material type','A type of joint'], answer:1},
+        {q:'What does "ergonomics" mean in design?', options:['Making it look good','Designing for human comfort and use','Choosing materials','Cost of production'], answer:1},
+        {q:'Which wood is used for furniture and is very durable?', options:['Balsa','Poplar','Oak','MDF'], answer:2},
+        {q:'What is "laminating" in woodwork?', options:['Cutting thin strips','Bonding layers of wood together','A surface finish','A joint technique'], answer:1},
+        {q:'What is the purpose of a pilot hole?', options:['To finish a surface','To prevent wood splitting when screwing','To measure depth','To create a joint'], answer:1},
+      ]},
+  ],
+  'business': [
+    { levelRequired:2, name:'The Market Minion', icon:'💰', description:'Basic business concepts test.',
+      questions:[
+        {q:'What does "profit" mean?', options:['Total sales','Revenue minus costs','Total costs','Money borrowed'], answer:1},
+        {q:'What is a "sole trader"?', options:['A business with many owners','One person owns and runs the business','A government company','A charity'], answer:1},
+        {q:'What does "B2C" stand for?', options:['Business to Company','Business to Consumer','Buy 2 Cheaply','Business to Contract'], answer:1},
+        {q:'What is "market research"?', options:['Buying products','Gathering information about customers','Selling products','Advertising'], answer:1},
+        {q:'What is a "limited company" (Ltd)?', options:['A very small business','Owners have limited liability','A company that can\'t grow','A sole trader'], answer:1},
+      ]},
+    { levelRequired:5, name:'The Finance Fiend', icon:'📈', description:'Marketing, finance and HR challenge.',
+      questions:[
+        {q:'What is the "marketing mix" also known as?', options:['The 3 Ps','The 4 Ps','The 5 Cs','The 3 Cs'], answer:1},
+        {q:'What is "cash flow"?', options:['Total profit','Movement of money in and out of a business','Bank balance','Total revenue'], answer:1},
+        {q:'What does "USP" stand for?', options:['Unique Selling Point','Universal Sales Price','United Sales Plan','Unique Service Product'], answer:0},
+        {q:'What is "penetration pricing"?', options:['High prices to maximise profit','Low prices to enter a market','Matching competitor prices','Seasonal pricing'], answer:1},
+        {q:'What is "motivation" in business?', options:['Advertising strategy','What drives employees to work hard','A pricing strategy','A type of market'], answer:1},
+      ]},
+    { levelRequired:8, name:'The Business Titan', icon:'👑', description:'Advanced GCSE business challenge.',
+      questions:[
+        {q:'What does "economies of scale" mean?', options:['Costs rise as production increases','Cost per unit falls as production increases','Revenue increases with scale','Fixed costs fall'], answer:1},
+        {q:'What is "diseconomies of scale"?', options:['When unit costs fall','When unit costs rise beyond optimal size','When revenue falls','When profit maximises'], answer:1},
+        {q:'What is a "stakeholder"?', options:['A shareholder only','Anyone with an interest in the business','Only customers','Only employees'], answer:1},
+        {q:'"Primary research" means:', options:['Research from books','Collecting new data first-hand','Using existing data','Internet research'], answer:1},
+        {q:'What is "contribution" in finance?', options:['Total revenue','Selling price minus variable cost per unit','Total profit','Fixed costs'], answer:1},
+      ]},
+  ],
+};
+
+let activeBoss=null; // {subjectId, bossIndex, currentQ, score, answers}
+
+function getBossesForSubject(subjId){
+  return (BOSS_DEFS[subjId]||[]);
+}
+
+function renderBoss(el){
+  if(activeBoss){renderBossFight(el);return;}
+
+  const unlockedCount=S.subjects.reduce((n,s)=>{
+    return n+(BOSS_DEFS[s.id]||[]).filter(b=>s.level>=b.levelRequired).length;
+  },0);
+  const defeatedCount=S.bossResults.length;
+
+  let html=`<div class="page-title">⚔️ Boss Battles</div>
+  <div class="page-sub">Reach the required level in a subject to unlock and fight its bosses!</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px">
+    <div class="stat-box"><div class="stat-label">Bosses Unlocked</div><div class="stat-value" style="color:#f97316">⚔️ ${unlockedCount}</div></div>
+    <div class="stat-box"><div class="stat-label">Bosses Defeated</div><div class="stat-value" style="color:#22c55e">💀 ${defeatedCount}</div></div>
+    <div class="stat-box"><div class="stat-label">XP from Battles</div><div class="stat-value" style="color:#3b82f6">⚡ ${defeatedCount*50}</div></div>
+  </div>`;
+
+  S.subjects.forEach(s=>{
+    const bosses=BOSS_DEFS[s.id]||[];
+    if(!bosses.length)return;
+    html+=`<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:22px">${s.emoji}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;color:#ddd;font-size:14px">${s.name}</div>
+          <div style="font-size:11px;color:#555">Level ${s.level} — ${bosses.filter(b=>s.level>=b.levelRequired).length}/${bosses.length} bosses unlocked</div>
+        </div>
+      </div>
+      <div style="display:grid;gap:8px">`;
+    bosses.forEach((b,i)=>{
+      const unlocked=s.level>=b.levelRequired;
+      const pastAttempts=S.bossResults.filter(r=>r.subjectId===s.id&&r.bossIndex===i);
+      const best=pastAttempts.length?Math.max(...pastAttempts.map(r=>r.score)):null;
+      const bestPct=best!==null?Math.round((best/b.questions.length)*100):null;
+      const beatColor=bestPct>=80?'#22c55e':bestPct>=60?'#eab308':'#ef4444';
+      html+=`<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;background:${unlocked?'#0d0d0d':'#080808'};border:1px solid ${unlocked?'#2a2a2a':'#141414'}">
+        <div style="font-size:28px;${unlocked?'':'filter:grayscale(1) brightness(0.3)'}">${b.icon}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:${unlocked?'#ddd':'#333'};font-size:13px">${b.name}</div>
+          <div style="font-size:11px;color:#444;margin-top:2px">${b.description}</div>
+          <div style="font-size:10px;color:#333;margin-top:3px">Requires Level ${b.levelRequired} · ${b.questions.length} questions · +50 XP</div>
+        </div>
+        ${bestPct!==null?`<div style="text-align:right;margin-right:8px"><div style="font-size:13px;font-weight:700;color:${beatColor}">Best: ${bestPct}%</div><div style="font-size:10px;color:#444">${pastAttempts.length} attempt${pastAttempts.length!==1?'s':''}</div></div>`:''}
+        ${unlocked
+          ?`<button class="btn btn-${bestPct!==null?'gray':'blue'}" onclick="startBoss('${s.id}',${i})" style="white-space:nowrap;flex-shrink:0">${bestPct!==null?'⚔️ Retry':'⚔️ Fight!'}</button>`
+          :`<div style="font-size:11px;color:#333;text-align:center;min-width:70px">🔒 Lvl ${b.levelRequired}</div>`}
       </div>`;
-    }).join('');
-    // Mini sparkline
-    const maxS=Math.max(...sorted.map(r=>pct(r.score,r.max)),1);
-    const pts=sorted.map((r,i)=>{const x=20+i*(200/Math.max(sorted.length-1,1));const y=50-Math.round((pct(r.score,r.max)/100)*45);return x+','+y;}).join(' ');
-    const sparkline=sorted.length>1?`<svg viewBox="0 0 240 55" width="100%" style="opacity:.8">
-      <polyline points="${pts}" fill="none" stroke="#3b82f6" stroke-width="2"/>
-      ${sorted.map((r,i)=>{const x=20+i*(200/Math.max(sorted.length-1,1));const y=50-Math.round((pct(r.score,r.max)/100)*45);const c=pct(r.score,r.max)>=80?'#22c55e':pct(r.score,r.max)>=60?'#eab308':'#ef4444';return`<circle cx="${x}" cy="${y}" r="4" fill="${c}"/>`;}).join('')}
-    </svg>`:''
-    return `<div class="card" style="margin-bottom:14px">
-      <div style="font-size:14px;font-weight:700;color:#ddd;margin-bottom:12px">${subj}</div>
-      <div class="grid-2">${rows}${sparkline}</div>
+    });
+    html+=`</div></div>`;
+  });
+
+  // Past results
+  if(S.bossResults.length){
+    html+=`<div class="card"><div class="card-title">Battle History</div>`;
+    [...S.bossResults].reverse().slice(0,8).forEach(r=>{
+      const subj=S.subjects.find(s=>s.id===r.subjectId);
+      const boss=(BOSS_DEFS[r.subjectId]||[])[r.bossIndex];
+      if(!subj||!boss)return;
+      const p=Math.round((r.score/boss.questions.length)*100);
+      const c=p>=80?'#22c55e':p>=60?'#eab308':'#ef4444';
+      html+=`<div class="boss-result"><div><div style="font-size:12px;font-weight:600;color:#ccc">${subj.emoji} ${boss.name}</div><div style="font-size:10px;color:#444">${r.date}</div></div><div style="text-align:right"><div class="boss-score" style="color:${c}">${p}%</div><div style="font-size:10px;color:#444">${r.score}/${boss.questions.length}</div></div></div>`;
+    });
+    html+=`</div>`;
+  }
+
+  el.innerHTML=html;
+}
+
+function startBoss(subjId,bossIdx){
+  activeBoss={subjectId:subjId,bossIndex:bossIdx,currentQ:0,score:0,answers:[],phase:'fight'};
+  renderBoss(document.getElementById('page-boss'));
+}
+
+function renderBossFight(el){
+  const s=S.subjects.find(x=>x.id===activeBoss.subjectId);
+  const boss=BOSS_DEFS[activeBoss.subjectId][activeBoss.bossIndex];
+
+  if(activeBoss.phase==='result'){renderBossResult(el,s,boss);return;}
+
+  const q=boss.questions[activeBoss.currentQ];
+  const progress=activeBoss.currentQ+1;
+  const total=boss.questions.length;
+  const pctDone=Math.round((activeBoss.currentQ/total)*100);
+
+  el.innerHTML=`
+  <button class="back-btn" onclick="activeBoss=null;renderBoss(document.getElementById('page-boss'))">← Abandon Battle</button>
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:48px;margin-bottom:8px">${boss.icon}</div>
+    <div style="font-size:20px;font-weight:800;color:#fff">${boss.name}</div>
+    <div style="font-size:13px;color:#555;margin-bottom:16px">${s.emoji} ${s.name}</div>
+    <div style="max-width:400px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-bottom:6px">
+        <span>Question ${progress} of ${total}</span><span>Score: ${activeBoss.score}/${activeBoss.currentQ}</span>
+      </div>
+      ${barHTML(activeBoss.currentQ,total,'#f97316',8)}
+    </div>
+  </div>
+  <div class="card" style="max-width:560px;margin:0 auto">
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:20px;line-height:1.5">${progress}. ${q.q}</div>
+    <div style="display:grid;gap:10px">
+      ${q.options.map((opt,i)=>`
+        <button onclick="answerBoss(${i})" style="text-align:left;padding:12px 16px;border-radius:10px;border:2px solid #1f1f1f;background:#0d0d0d;color:#ccc;font-size:13px;font-weight:500;transition:all .15s;cursor:pointer"
+          onmouseover="this.style.borderColor='#3b82f6';this.style.color='#fff'"
+          onmouseout="this.style.borderColor='#1f1f1f';this.style.color='#ccc'">
+          <span style="color:#555;margin-right:10px">${String.fromCharCode(65+i)}.</span>${opt}
+        </button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function answerBoss(chosenIdx){
+  const boss=BOSS_DEFS[activeBoss.subjectId][activeBoss.bossIndex];
+  const q=boss.questions[activeBoss.currentQ];
+  const correct=chosenIdx===q.answer;
+  if(correct)activeBoss.score++;
+  activeBoss.answers.push({chosen:chosenIdx,correct});
+
+  // Show feedback briefly then move on
+  const el=document.getElementById('page-boss');
+  const buttons=el.querySelectorAll('button[onclick^="answerBoss"]');
+  buttons.forEach((btn,i)=>{
+    btn.onclick=null;btn.style.cursor='default';
+    if(i===q.answer){btn.style.borderColor='#22c55e';btn.style.background='#061a0e';btn.style.color='#22c55e';}
+    else if(i===chosenIdx&&!correct){btn.style.borderColor='#ef4444';btn.style.background='#1a0808';btn.style.color='#ef4444';}
+  });
+  // Show result label
+  const feedbackEl=document.createElement('div');
+  feedbackEl.style.cssText='text-align:center;margin-top:16px;font-size:20px;font-weight:800;';
+  feedbackEl.textContent=correct?'✅ Correct!':'❌ Wrong!';
+  feedbackEl.style.color=correct?'#22c55e':'#ef4444';
+  el.querySelector('.card').appendChild(feedbackEl);
+
+  setTimeout(()=>{
+    activeBoss.currentQ++;
+    if(activeBoss.currentQ>=boss.questions.length){
+      activeBoss.phase='result';
+      // Save result
+      S.bossResults.push({id:Date.now(),subjectId:activeBoss.subjectId,bossIndex:activeBoss.bossIndex,score:activeBoss.score,date:new Date().toISOString().split('T')[0]});
+      S.totalXP+=50;
+      save();updateSidebarStats();checkAchievements();
+    }
+    renderBossFight(el);
+  },900);
+}
+
+function renderBossResult(el,s,boss){
+  const p=Math.round((activeBoss.score/boss.questions.length)*100);
+  const grade=p>=80?{g:'S',label:'Legendary!',color:'#22c55e',msg:'Outstanding! You defeated the boss completely!'}
+               :p>=60?{g:'A',label:'Victory!',color:'#3b82f6',msg:'Great work! The boss is defeated!'}
+               :p>=40?{g:'B',label:'Survived...',color:'#eab308',msg:'You scraped through. Keep practising!'}
+               :{g:'F',label:'Defeated!',color:'#ef4444',msg:'The boss won this time. Study up and retry!'};
+
+  const reviewHTML=boss.questions.map((q,i)=>{
+    const ans=activeBoss.answers[i];
+    const c=ans.correct?'#22c55e':'#ef4444';
+    return `<div style="padding:10px 12px;border-radius:8px;background:#0d0d0d;border-left:3px solid ${c};margin-bottom:8px">
+      <div style="font-size:12px;color:#aaa;margin-bottom:4px">${q.q}</div>
+      <div style="font-size:12px;color:${c}">${ans.correct?'✓ Correct':'✗ Wrong'} — Correct answer: <strong style="color:#fff">${q.options[q.answer]}</strong></div>
     </div>`;
   }).join('');
 
   el.innerHTML=`
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-    <div><div class="page-title">⚔️ Boss Battles</div><div class="page-sub">Track test scores and see your improvement</div></div>
-    <button class="btn btn-blue" onclick="showBossForm()">+ Add Result</button>
-  </div>
-  <div id="boss-form" style="display:none;margin-bottom:20px">
-    <div class="card">
-      <div class="card-title">New Test Result (+50 XP)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px">
-        <select id="boss-subj" class="form-input" style="font-size:12px">
-          ${S.subjects.map(s=>`<option>${s.name}</option>`).join('')}
-        </select>
-        <input id="boss-name" class="form-input" placeholder="Test name" style="font-size:12px"/>
-        <input id="boss-score" class="form-input" type="number" placeholder="Your score" style="font-size:12px"/>
-        <input id="boss-max" class="form-input" type="number" placeholder="Max score" value="100" style="font-size:12px"/>
-      </div>
-      <button class="btn btn-green" onclick="saveBossResult()">Save +50 XP</button>
-      <button class="btn btn-gray" style="margin-left:8px" onclick="document.getElementById('boss-form').style.display='none'">Cancel</button>
+  <div style="text-align:center;margin-bottom:28px">
+    <div style="font-size:60px;margin-bottom:12px">${p>=80?'🏆':p>=60?'⚔️':p>=40?'😅':'💀'}</div>
+    <div style="font-size:32px;font-weight:800;color:${grade.color}">${grade.label}</div>
+    <div style="font-size:13px;color:#555;margin-top:6px">${boss.icon} ${boss.name} · ${s.emoji} ${s.name}</div>
+    <div style="margin:20px auto;max-width:180px">
+      <div style="font-size:72px;font-weight:900;color:${grade.color};line-height:1">${p}%</div>
+      <div style="font-size:14px;color:#555;margin-top:4px">${activeBoss.score}/${boss.questions.length} correct</div>
     </div>
+    <div style="font-size:14px;color:#aaa;margin-bottom:8px">${grade.msg}</div>
+    <div style="font-size:13px;color:#3b82f6;font-weight:600">+50 XP earned!</div>
   </div>
-  ${resultsHTML||'<div style="color:#333;text-align:center;padding:40px">No boss battles yet. Add a test result to get started!</div>'}`;
-}
-
-function showBossForm(){document.getElementById('boss-form').style.display='block';}
-function saveBossResult(){
-  const subj=document.getElementById('boss-subj').value;
-  const name=document.getElementById('boss-name').value;
-  const score=parseInt(document.getElementById('boss-score').value)||0;
-  const max=parseInt(document.getElementById('boss-max').value)||100;
-  if(!name)return;
-  S.bossResults.push({id:Date.now(),subject:subj,name,score,max,date:new Date().toISOString().split('T')[0]});
-  S.totalXP+=50;save();updateSidebarStats();checkAchievements();
-  toast('Boss Battle logged! +50 XP');
-  renderBoss(document.getElementById('page-boss'));
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Question Review</div>
+    ${reviewHTML}
+  </div>
+  <div style="display:flex;gap:10px;justify-content:center">
+    <button class="btn btn-blue" onclick="startBoss('${s.id}',${activeBoss.bossIndex})">⚔️ Try Again</button>
+    <button class="btn btn-gray" onclick="activeBoss=null;renderBoss(document.getElementById('page-boss'))">← Back to Bosses</button>
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -871,7 +1226,13 @@ function renderAnalytics(el){
 
   const subjBars=S.subjects.map(s=>{const w=Math.round((s.level/10)*100);const c=levelColor(s.level);return `<div class="chart-bar-row"><div class="chart-label">${s.emoji} ${s.name.split(' ')[0]}</div><div class="chart-bar-bg"><div class="chart-bar-inner" style="width:${w}%;background:${c}">${s.level}</div></div></div>`;}).join('');
 
-  const bossBars=S.bossResults.slice(-8).map(r=>{const p=pct(r.score,r.max);const c=p>=80?'#22c55e':p>=60?'#eab308':'#ef4444';return `<div class="chart-bar-row"><div class="chart-label" style="width:90px">${r.name.substring(0,12)}</div><div class="chart-bar-bg"><div class="chart-bar-inner" style="width:${p}%;background:${c}">${p}%</div></div></div>`;}).join('');
+  const bossBars=S.bossResults.slice(-8).map(r=>{
+    const boss=(BOSS_DEFS[r.subjectId]||[])[r.bossIndex];
+    if(!boss)return'';
+    const p=Math.round((r.score/boss.questions.length)*100);
+    const c=p>=80?'#22c55e':p>=60?'#eab308':'#ef4444';
+    return `<div class="chart-bar-row"><div class="chart-label" style="width:90px">${boss.name.substring(0,12)}</div><div class="chart-bar-bg"><div class="chart-bar-inner" style="width:${p}%;background:${c}">${p}%</div></div></div>`;
+  }).join('');
 
   const weakAll=S.subjects.filter(s=>s.weakTopics.length).flatMap(s=>s.weakTopics.map(w=>({w,s:s.name})));
 

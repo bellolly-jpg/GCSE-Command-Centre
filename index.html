@@ -299,7 +299,71 @@ const KEY='ollys_gcse_v3';
 let S=null;
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){}
 if(!S)S=defaultState();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){console.warn('Save failed',e);}
+}
+
+// ── Called once on load: handle streak + weekly mission/calendar reset ────────
+function runStartupChecks(){
+  const now = new Date();
+  const todayStr = now.toDateString();
+  // Get Monday of current week as a stable week ID
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+  const thisWeekId = monday.toDateString();
+
+  // ── STREAK ──────────────────────────────────────────
+  const last = S.lastActiveDate || null;
+  if(!last){
+    // First ever visit
+    S.streak = 1;
+    S.actedToday = false;
+  } else if(last === todayStr){
+    // Same day — do nothing to streak, preserve actedToday
+  } else {
+    const lastDate = new Date(last);
+    const diffDays = Math.round((now - lastDate) / 86400000);
+    if(diffDays === 1){
+      // Consecutive day but haven't acted yet today — don't increment until they do something
+      S.actedToday = false;
+    } else {
+      // Missed a day or more — reset streak
+      S.streak = 0;
+      S.actedToday = false;
+    }
+  }
+  S.lastActiveDate = todayStr;
+
+  // ── WEEKLY RESET ─────────────────────────────────────
+  if(S.currentWeekId !== thisWeekId){
+    S.currentWeekId = thisWeekId;
+    // Reset missions
+    S.missions.forEach(m=>m.done=false);
+    // Reset calendar claimed slots
+    S.calendarClaimed = {};
+    toast('📅 New week — missions & timetable XP reset!');
+  }
+
+  // Ensure calendarClaimed exists on old saves
+  if(!S.calendarClaimed) S.calendarClaimed = {};
+  if(typeof S.actedToday === 'undefined') S.actedToday = false;
+
+  save();
+}
+
+function bumpStreak(){
+  if(!S.actedToday){
+    S.actedToday = true;
+    S.streak = (S.streak||0) + 1;
+    S.lastActiveDate = new Date().toDateString();
+    save();
+    updateSidebarStats();
+    if(S.streak>1) toast('🔥 '+S.streak+' day streak!');
+    checkAchievements();
+  }
+}
+
 function getRank(xp){return RANKS.find(r=>xp>=r.min&&xp<=r.max)||RANKS[0];}
 function getNextRank(xp){return RANKS.find(r=>r.min>xp)||null;}
 function levelColor(l){return l>=8?'#22c55e':l>=5?'#eab308':'#ef4444';}
@@ -611,7 +675,7 @@ function earnXP(id,amount,msg){
   const s=S.subjects.find(x=>x.id===id);
   s.xp+=amount;s.level=Math.min(10,Math.floor(s.xp/200)+1);
   S.totalXP+=amount;save();updateSidebarStats();
-  toast(msg);
+  toast(msg);bumpStreak();
   checkAchievements();
   renderSubjects(document.getElementById('page-subjects'));
 }
@@ -648,8 +712,13 @@ function saveNotes(id){
 // ═══════════════════════════════════════════════════════
 function toggleMission(id){
   const m=S.missions.find(x=>x.id===id);
-  if(!m.done){S.totalXP+=m.xp;toast('Mission complete! +'+m.xp+' XP');}
-  m.done=!m.done;save();updateSidebarStats();checkAchievements();
+  if(!m.done){
+    S.totalXP+=m.xp;
+    toast('Mission complete! +'+m.xp+' XP');
+    bumpStreak();
+  }
+  m.done=!m.done;
+  save();updateSidebarStats();checkAchievements();
   if(currentPage==='dashboard')renderDashboard(document.getElementById('page-dashboard'));
   else if(currentPage==='missions')renderMissions(document.getElementById('page-missions'));
 }
@@ -1056,7 +1125,7 @@ function answerBoss(chosenIdx){
       // Save result
       S.bossResults.push({id:Date.now(),subjectId:activeBoss.subjectId,bossIndex:activeBoss.bossIndex,score:activeBoss.score,date:new Date().toISOString().split('T')[0]});
       S.totalXP+=50;
-      save();updateSidebarStats();checkAchievements();
+      save();updateSidebarStats();checkAchievements();bumpStreak();
     }
     renderBossFight(el);
   },900);
@@ -1162,18 +1231,43 @@ function renderCalendar(el){
   const grid=TIMETABLE.map(({day,periods})=>`
     <div>
       <div class="cal-day-header">${day}</div>
-      ${periods.map(p=>{
+      ${periods.map((p,pi)=>{
         const c=SUBJ_COLORS[p.subject]||'#555';
+        const subj=S.subjects.find(s=>s.name.startsWith(p.subject.split(' ')[0]))||null;
+        const sid=subj?subj.id:'';
+        const slotKey=day+'_'+pi;
+        const claimed=!!(S.calendarClaimed&&S.calendarClaimed[slotKey]);
         return `<div class="cal-period" style="background:${c}14;border:1px solid ${c}33">
           <div class="cal-time">${p.time}</div>
           <div class="cal-subj" style="color:${c}">${p.subject}</div>
-          <div class="cal-room">${p.room}</div>
+          <div class="cal-room" style="margin-bottom:6px">${p.room}</div>
+          ${claimed
+            ? `<button disabled style="width:100%;padding:3px 0;border-radius:5px;background:${c}11;border:1px solid ${c}22;color:#444;font-size:10px;font-weight:700;opacity:0.5;cursor:default">✅ Done!</button>`
+            : `<button onclick="calEarnXP('${sid}','${p.subject}','${slotKey}',this)" style="width:100%;padding:3px 0;border-radius:5px;background:${c}22;border:1px solid ${c}44;color:${c};font-size:10px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='${c}44'" onmouseout="this.style.background='${c}22'">+2 XP ✓</button>`
+          }
         </div>`;
       }).join('')}
     </div>`).join('');
   el.innerHTML=`<div class="page-title">📅 Weekly Timetable</div>
-  <div style="margin-bottom:16px;font-size:13px;color:#555">Your school week at a glance</div>
+  <div style="margin-bottom:16px;font-size:13px;color:#555">Tap <strong style="color:#aaa">+2 XP</strong> after attending a lesson. Resets every Monday.</div>
   <div class="scroll-x"><div class="cal-grid">${grid}</div></div>`;
+}
+
+function calEarnXP(subjId, subjName, slotKey, btn){
+  if(S.calendarClaimed[slotKey]){toast('Already claimed for this lesson!');return;}
+  S.calendarClaimed[slotKey]=true;
+  btn.textContent='✅ Done!';
+  btn.style.opacity='0.5';
+  btn.style.cursor='default';
+  btn.onclick=null;
+  S.totalXP+=2;
+  if(subjId){
+    const s=S.subjects.find(x=>x.id===subjId);
+    if(s){s.xp+=2;s.level=Math.min(10,Math.floor(s.xp/200)+1);}
+  }
+  save();updateSidebarStats();checkAchievements();
+  bumpStreak();
+  toast('Attended '+subjName+'! +2 XP');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1312,6 +1406,7 @@ function addXPDebug(n){S.totalXP+=n;save();updateSidebarStats();checkAchievement
 // INIT
 // ═══════════════════════════════════════════════════════
 function init(){
+  runStartupChecks();
   renderSidebar();
   checkAchievements();
   navigate('dashboard');

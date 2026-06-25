@@ -4,6 +4,10 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Olly's GCSE Command Centre</title>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -44,6 +48,10 @@ nav{flex:1;padding:8px}
 .nav-btn.active{background:#161616;color:#fff;border-left-color:var(--green)}
 .nav-icon{font-size:15px;width:18px;text-align:center}
 .sb-footer{padding:10px 16px;border-top:1px solid #181818;font-size:10px;color:#2a2a2a}
+.sb-user{padding:10px 16px;border-top:1px solid #181818;display:flex;align-items:center;gap:8px}
+.sb-user-email{flex:1;font-size:10px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sb-logout{font-size:10px;color:#333;cursor:pointer;padding:3px 7px;border-radius:5px;border:1px solid #222;background:none;transition:all .15s}
+.sb-logout:hover{color:#ef4444;border-color:#3a1111}
 
 /* CARDS */
 .card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;transition:border-color .2s}
@@ -161,6 +169,39 @@ nav{flex:1;padding:8px}
 #toast{position:fixed;bottom:24px;right:24px;z-index:999;background:#0f2a1a;color:var(--green);border:1px solid var(--green-border);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none}
 #toast.show{transform:translateY(0);opacity:1}
 
+/* LOGIN SCREEN */
+#login-screen{position:fixed;inset:0;background:#0a0a0a;z-index:9999;display:flex;align-items:center;justify-content:center}
+#login-screen.hidden{display:none}
+.login-box{width:100%;max-width:380px;padding:0 20px}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo-icon{font-size:48px;display:block;margin-bottom:10px}
+.login-logo-title{font-size:22px;font-weight:800;color:#fff}
+.login-logo-sub{font-size:12px;color:#555;margin-top:4px}
+.login-card{background:#111;border:1px solid #1f1f1f;border-radius:16px;padding:28px 24px}
+.login-tabs{display:flex;gap:4px;margin-bottom:24px;background:#0a0a0a;border-radius:10px;padding:3px}
+.login-tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;color:#555;border:none;background:none}
+.login-tab.active{background:#161616;color:#fff}
+.login-field{margin-bottom:14px}
+.login-label{font-size:11px;color:#555;font-weight:600;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;display:block}
+.login-input{width:100%;background:#0d0d0d;border:1px solid #222;border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:14px;transition:border-color .2s}
+.login-input:focus{border-color:#333;outline:none}
+.login-btn{width:100%;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .2s;margin-top:4px}
+.login-btn-primary{background:#22c55e;color:#000}
+.login-btn-primary:hover{background:#16a34a}
+.login-btn-google{background:#111;color:#ccc;border:1px solid #2a2a2a;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.login-btn-google:hover{background:#1a1a1a;border-color:#333}
+.login-divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:#333;font-size:11px}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#1f1f1f}
+.login-error{color:#ef4444;font-size:12px;margin-top:10px;text-align:center;min-height:18px}
+
+/* SYNC INDICATOR */
+#sync-indicator{position:fixed;top:12px;right:16px;z-index:200;font-size:11px;color:#555;display:flex;align-items:center;gap:5px;opacity:0;transition:opacity .3s}
+#sync-indicator.show{opacity:1}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#22c55e}
+.sync-dot.syncing{background:#eab308;animation:pulse 1s infinite}
+.sync-dot.error{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
 /* DETAIL BACK BTN */
 .back-btn{display:flex;align-items:center;gap:6px;color:#555;font-size:13px;margin-bottom:16px;cursor:pointer;background:none;border:none;padding:0}
 .back-btn:hover{color:#aaa}
@@ -171,6 +212,46 @@ nav{flex:1;padding:8px}
 </head>
 <body>
 <div id="toast"></div>
+<div id="sync-indicator"><div class="sync-dot" id="sync-dot"></div><span id="sync-text">Saved</span></div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="login-logo-icon">⚡</span>
+      <div class="login-logo-title">Olly's GCSE Command Centre</div>
+      <div class="login-logo-sub">Sign in to sync your progress across all devices</div>
+    </div>
+    <div class="login-card">
+      <div class="login-tabs">
+        <button class="login-tab active" id="tab-signin" onclick="switchLoginTab('signin')">Sign In</button>
+        <button class="login-tab" id="tab-signup" onclick="switchLoginTab('signup')">Sign Up</button>
+      </div>
+      <div id="login-form-signin">
+        <div class="login-field"><label class="login-label">Email</label><input class="login-input" id="si-email" type="email" placeholder="you@email.com" autocomplete="email"/></div>
+        <div class="login-field"><label class="login-label">Password</label><input class="login-input" id="si-password" type="password" placeholder="Your password" autocomplete="current-password"/></div>
+        <button class="login-btn login-btn-primary" onclick="doSignIn()">Sign In →</button>
+        <button class="login-btn-google" onclick="doGoogleSignIn()">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.4 30.2 0 24 0 14.8 0 7 5.4 3.2 13.2l7.8 6C12.9 13.2 18 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.5 37.3 46.5 31.4 46.5 24.5z"/><path fill="#FBBC05" d="M11 28.2c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6C1.2 16.1 0 19.9 0 24s1.2 7.9 3.2 11.2l7.8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6 0-11.1-4-12.9-9.3l-7.8 6C7 43.4 14.9 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+        <div class="login-error" id="si-error"></div>
+      </div>
+      <div id="login-form-signup" style="display:none">
+        <div class="login-field"><label class="login-label">Email</label><input class="login-input" id="su-email" type="email" placeholder="you@email.com" autocomplete="email"/></div>
+        <div class="login-field"><label class="login-label">Password (min 6 chars)</label><input class="login-input" id="su-password" type="password" placeholder="Choose a password" autocomplete="new-password"/></div>
+        <div class="login-field"><label class="login-label">Confirm Password</label><input class="login-input" id="su-password2" type="password" placeholder="Repeat password" autocomplete="new-password"/></div>
+        <button class="login-btn login-btn-primary" onclick="doSignUp()">Create Account →</button>
+        <button class="login-btn-google" onclick="doGoogleSignIn()">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.4 30.2 0 24 0 14.8 0 7 5.4 3.2 13.2l7.8 6C12.9 13.2 18 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8C43.5 37.3 46.5 31.4 46.5 24.5z"/><path fill="#FBBC05" d="M11 28.2c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6C1.2 16.1 0 19.9 0 24s1.2 7.9 3.2 11.2l7.8-6z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2.1 1.4-4.7 2.2-7.7 2.2-6 0-11.1-4-12.9-9.3l-7.8 6C7 43.4 14.9 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+        <div class="login-error" id="su-error"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="app">
   <div id="sidebar">
     <div class="sb-header">
@@ -187,6 +268,7 @@ nav{flex:1;padding:8px}
       </div>
     </div>
     <nav id="nav"></nav>
+    <div class="sb-user"><div class="sb-user-email" id="sb-user-email">Not signed in</div><button class="sb-logout" onclick="doSignOut()">Sign out</button></div>
     <div class="sb-footer">Year 7 → GCSE Champion</div>
   </div>
   <div id="main">
@@ -293,15 +375,61 @@ function defaultState(){
 }
 
 // ═══════════════════════════════════════════════════════
+// FIREBASE CONFIG  ← PASTE YOUR CONFIG HERE
+// ═══════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDkeYWzmNP0n1JFrr9Aq4e2yBeDUKXrgoo",
+  authDomain: "gcsedashboard.firebaseapp.com",
+  projectId: "gcsedashboard",
+  storageBucket: "gcsedashboard.firebasestorage.app",
+  messagingSenderId: "790114017150",
+  appId: "1:790114017150:web:f0565c77d6409f8806dd2f",
+  measurementId: "G-YY0BPJ2P7J"
+};
+
+// Initialise Firebase
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
 const KEY='ollys_gcse_v3';
 let S=null;
+let currentUser=null;
+let saveTimer=null;
+
+// Load from localStorage as immediate fallback
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){}
 if(!S)S=defaultState();
 
+// ── Save: localStorage immediately + Firestore debounced ─────────────────────
 function save(){
-  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){console.warn('Save failed',e);}
+  // Always save locally first so nothing is ever lost
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){console.warn('Local save failed',e);}
+  // Debounce cloud save by 1.5s to avoid hammering Firestore on rapid changes
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>cloudSave(),1500);
+}
+
+function cloudSave(){
+  if(!currentUser)return;
+  setSyncStatus('syncing');
+  db.collection('users').doc(currentUser.uid).set(S)
+    .then(()=>setSyncStatus('saved'))
+    .catch(err=>{console.warn('Cloud save failed',err);setSyncStatus('error');});
+}
+
+function setSyncStatus(status){
+  const dot=document.getElementById('sync-dot');
+  const txt=document.getElementById('sync-text');
+  const ind=document.getElementById('sync-indicator');
+  if(!dot)return;
+  dot.className='sync-dot'+(status==='syncing'?' syncing':status==='error'?' error':'');
+  txt.textContent=status==='syncing'?'Saving…':status==='error'?'Sync error':'Saved ✓';
+  ind.classList.add('show');
+  if(status==='saved')setTimeout(()=>ind.classList.remove('show'),2000);
 }
 
 // ── Called once on load: handle streak + weekly mission/calendar reset ────────
@@ -1403,15 +1531,121 @@ function resetAll(){if(confirm('Reset ALL progress? This cannot be undone!')){S=
 function addXPDebug(n){S.totalXP+=n;save();updateSidebarStats();checkAchievements();settingsMsg('+'+n+' XP added!');toast('+'+n+' XP added!');}
 
 // ═══════════════════════════════════════════════════════
-// INIT
+// LOGIN UI FUNCTIONS
 // ═══════════════════════════════════════════════════════
-function init(){
+function switchLoginTab(tab){
+  document.getElementById('tab-signin').classList.toggle('active',tab==='signin');
+  document.getElementById('tab-signup').classList.toggle('active',tab==='signup');
+  document.getElementById('login-form-signin').style.display=tab==='signin'?'block':'none';
+  document.getElementById('login-form-signup').style.display=tab==='signup'?'block':'none';
+}
+
+function setLoginError(form,msg){
+  document.getElementById(form+'-error').textContent=msg;
+}
+
+function doSignIn(){
+  const email=document.getElementById('si-email').value.trim();
+  const pass=document.getElementById('si-password').value;
+  if(!email||!pass){setLoginError('si','Please fill in all fields.');return;}
+  setLoginError('si','');
+  auth.signInWithEmailAndPassword(email,pass)
+    .catch(err=>setLoginError('si',friendlyAuthError(err)));
+}
+
+function doSignUp(){
+  const email=document.getElementById('su-email').value.trim();
+  const pass=document.getElementById('su-password').value;
+  const pass2=document.getElementById('su-password2').value;
+  if(!email||!pass||!pass2){setLoginError('su','Please fill in all fields.');return;}
+  if(pass!==pass2){setLoginError('su','Passwords do not match.');return;}
+  if(pass.length<6){setLoginError('su','Password must be at least 6 characters.');return;}
+  setLoginError('su','');
+  auth.createUserWithEmailAndPassword(email,pass)
+    .catch(err=>setLoginError('su',friendlyAuthError(err)));
+}
+
+function doGoogleSignIn(){
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .catch(err=>setLoginError('si',friendlyAuthError(err)));
+}
+
+function doSignOut(){
+  if(!confirm('Sign out?'))return;
+  auth.signOut();
+}
+
+function friendlyAuthError(err){
+  const map={
+    'auth/user-not-found':'No account found with that email.',
+    'auth/wrong-password':'Incorrect password.',
+    'auth/email-already-in-use':'An account already exists with this email.',
+    'auth/invalid-email':'Please enter a valid email address.',
+    'auth/weak-password':'Password is too weak.',
+    'auth/popup-closed-by-user':'Sign-in cancelled.',
+    'auth/network-request-failed':'Network error — check your connection.',
+  };
+  return map[err.code]||err.message;
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT — Firebase auth gate
+// ═══════════════════════════════════════════════════════
+function launchApp(){
   runStartupChecks();
   renderSidebar();
   checkAchievements();
   navigate('dashboard');
 }
-init();
+
+// Watch auth state — this is the single entry point
+auth.onAuthStateChanged(user=>{
+  if(user){
+    currentUser=user;
+    // Update sidebar email
+    const emailEl=document.getElementById('sb-user-email');
+    if(emailEl)emailEl.textContent=user.email||user.displayName||'Signed in';
+    // Try load data from Firestore, fall back to localStorage
+    db.collection('users').doc(user.uid).get()
+      .then(doc=>{
+        if(doc.exists){
+          S=doc.data();
+          // Also update localStorage with cloud data
+          try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+        } else {
+          // New user — save default state to Firestore
+          cloudSave();
+        }
+        // Hide login, show app
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app').style.display='flex';
+        launchApp();
+      })
+      .catch(err=>{
+        console.warn('Firestore load failed, using local data',err);
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app').style.display='flex';
+        launchApp();
+      });
+  } else {
+    currentUser=null;
+    // Show login screen
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app').style.display='none';
+  }
+});
+
+// Show app shell (hidden until auth resolves)
+document.getElementById('app').style.display='none';
+setTimeout(()=>{
+  // If Firebase hasn't responded in 5s (e.g. no internet), let them in with local data
+  if(!currentUser && S){
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app').style.display='flex';
+    launchApp();
+  }
+},5000);
 </script>
 </body>
-</html>q
+</html>

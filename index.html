@@ -596,7 +596,7 @@ function renderDashboard(el){
   const weakCount=S.subjects.reduce((s,subj)=>s+subj.weakTopics.length,0);
 
   // XP sparkline
-  const maxXP=Math.max(...S.xpHistory);
+  const maxXP=Math.max(...S.xpHistory,1);
   const pts=S.xpHistory.map((v,i)=>{
     const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;
   }).join(' ');
@@ -1442,7 +1442,7 @@ function removeResource(id){S.resources=S.resources.filter(r=>r.id!==id);save();
 // ANALYTICS
 // ═══════════════════════════════════════════════════════
 function renderAnalytics(el){
-  const maxXP=Math.max(...S.xpHistory);
+  const maxXP=Math.max(...S.xpHistory,1);
   const pts=S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' ');
   const area='M'+S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' L')+` L${30+7*(340/7)},80 L30,80 Z`;
 
@@ -1592,11 +1592,13 @@ function friendlyAuthError(err){
 // ═══════════════════════════════════════════════════════
 // INIT — Firebase auth gate
 // ═══════════════════════════════════════════════════════
+let toastOnLaunch = null;
 function launchApp(){
   runStartupChecks();
   renderSidebar();
   checkAchievements();
   navigate('dashboard');
+  if(toastOnLaunch){ toast(toastOnLaunch); toastOnLaunch=null; }
 }
 
 // Watch auth state — this is the single entry point
@@ -1624,8 +1626,10 @@ auth.onAuthStateChanged(user=>{
       })
       .catch(err=>{
         console.warn('Firestore load failed, using local data',err);
+        toastOnLaunch = '⚠️ Cloud sync failed — using local data only (' + err.code + ')';
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('app').style.display='flex';
+
         launchApp();
       });
   } else {
@@ -1639,11 +1643,8 @@ auth.onAuthStateChanged(user=>{
 // Show app shell (hidden until auth resolves)
 document.getElementById('app').style.display='none';
 setTimeout(()=>{
-  // If Firebase hasn't responded in 5s (e.g. no internet), let them in with local data
-  if(!currentUser && S){
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('app').style.display='flex';
-    launchApp();
+  if(!currentUser){
+    setLoginError('si','Still connecting… if this persists, check your internet connection or Firebase config.');
   }
 },5000);
 </script>

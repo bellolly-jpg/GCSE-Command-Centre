@@ -375,9 +375,9 @@ function defaultState(){
 }
 
 // ═══════════════════════════════════════════════════════
-// FIREBASE CONFIG  ← PASTE YOUR CONFIG HERE
+// FIREBASE CONFIG
 // ═══════════════════════════════════════════════════════
-const firebaseConfig = {
+const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDkeYWzmNP0n1JFrr9Aq4e2yBeDUKXrgoo",
   authDomain: "gcsedashboard.firebaseapp.com",
   projectId: "gcsedashboard",
@@ -596,7 +596,7 @@ function renderDashboard(el){
   const weakCount=S.subjects.reduce((s,subj)=>s+subj.weakTopics.length,0);
 
   // XP sparkline
-  const maxXP=Math.max(...S.xpHistory);
+  const maxXP=Math.max(...S.xpHistory,1);
   const pts=S.xpHistory.map((v,i)=>{
     const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;
   }).join(' ');
@@ -1442,7 +1442,7 @@ function removeResource(id){S.resources=S.resources.filter(r=>r.id!==id);save();
 // ANALYTICS
 // ═══════════════════════════════════════════════════════
 function renderAnalytics(el){
-  const maxXP=Math.max(...S.xpHistory);
+  const maxXP=Math.max(...S.xpHistory,1);
   const pts=S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' ');
   const area='M'+S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' L')+` L${30+7*(340/7)},80 L30,80 Z`;
 

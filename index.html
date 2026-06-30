@@ -375,16 +375,15 @@ function defaultState(){
 }
 
 // ═══════════════════════════════════════════════════════
-// FIREBASE CONFIG
+// FIREBASE CONFIG  ← PASTE YOUR CONFIG HERE
 // ═══════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDkeYWzmNP0n1JFrr9Aq4e2yBeDUKXrgoo",
-  authDomain: "gcsedashboard.firebaseapp.com",
-  projectId: "gcsedashboard",
-  storageBucket: "gcsedashboard.firebasestorage.app",
-  messagingSenderId: "790114017150",
-  appId: "1:790114017150:web:f0565c77d6409f8806dd2f",
-  measurementId: "G-YY0BPJ2P7J"
+  apiKey: "PASTE_YOUR_apiKey_HERE",
+  authDomain: "PASTE_YOUR_authDomain_HERE",
+  projectId: "PASTE_YOUR_projectId_HERE",
+  storageBucket: "PASTE_YOUR_storageBucket_HERE",
+  messagingSenderId: "PASTE_YOUR_messagingSenderId_HERE",
+  appId: "PASTE_YOUR_appId_HERE"
 };
 
 // Initialise Firebase
@@ -442,26 +441,25 @@ function runStartupChecks(){
   const thisWeekId = monday.toDateString();
 
   // ── STREAK ──────────────────────────────────────────
-  const last = S.lastActiveDate || null;
-  if(!last){
-    // First ever visit
-    S.streak = 1;
-    S.actedToday = false;
-  } else if(last === todayStr){
-    // Same day — do nothing to streak, preserve actedToday
+  // We track lastStreakActionDate = the date the user last actually DID something (not just opened the app)
+  const lastAction = S.lastStreakActionDate || null;
+  if(!lastAction){
+    // Never completed any action yet — streak starts at 0, waiting for first action
+    if(typeof S.streak !== 'number') S.streak = 0;
+  } else if(lastAction === todayStr){
+    // Already acted today — streak stands, nothing to do
   } else {
-    const lastDate = new Date(last);
+    const lastDate = new Date(lastAction);
     const diffDays = Math.round((now - lastDate) / 86400000);
     if(diffDays === 1){
-      // Consecutive day but haven't acted yet today — don't increment until they do something
-      S.actedToday = false;
-    } else {
-      // Missed a day or more — reset streak
+      // Acted yesterday, not yet today — streak preserved, will bump on next action
+    } else if(diffDays > 1){
+      // Missed one or more full days — streak broken
       S.streak = 0;
-      S.actedToday = false;
     }
+    // diffDays === 0 shouldn't happen here since lastAction !== todayStr, but guard anyway
   }
-  S.lastActiveDate = todayStr;
+  S.actedToday = (lastAction === todayStr);
 
   // ── WEEKLY RESET ─────────────────────────────────────
   if(S.currentWeekId !== thisWeekId){
@@ -484,7 +482,7 @@ function bumpStreak(){
   if(!S.actedToday){
     S.actedToday = true;
     S.streak = (S.streak||0) + 1;
-    S.lastActiveDate = new Date().toDateString();
+    S.lastStreakActionDate = new Date().toDateString();
     save();
     updateSidebarStats();
     if(S.streak>1) toast('🔥 '+S.streak+' day streak!');
@@ -596,7 +594,7 @@ function renderDashboard(el){
   const weakCount=S.subjects.reduce((s,subj)=>s+subj.weakTopics.length,0);
 
   // XP sparkline
-  const maxXP=Math.max(...S.xpHistory,1);
+  const maxXP=Math.max(...S.xpHistory);
   const pts=S.xpHistory.map((v,i)=>{
     const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;
   }).join(' ');
@@ -1442,7 +1440,7 @@ function removeResource(id){S.resources=S.resources.filter(r=>r.id!==id);save();
 // ANALYTICS
 // ═══════════════════════════════════════════════════════
 function renderAnalytics(el){
-  const maxXP=Math.max(...S.xpHistory,1);
+  const maxXP=Math.max(...S.xpHistory);
   const pts=S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' ');
   const area='M'+S.xpHistory.map((v,i)=>{const x=30+i*(340/7);const y=80-Math.round((v/maxXP)*70);return x+','+y;}).join(' L')+` L${30+7*(340/7)},80 L30,80 Z`;
 

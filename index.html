@@ -317,13 +317,24 @@ const QUOTES=[
   'Believe you can and you\'re halfway there.',
   'Champions train, losers complain.',
 ];
-const TIMETABLE=[
-  {day:'Monday',periods:[{time:'9:00',subject:'Maths',room:'R12'},{time:'11:00',subject:'English Lang',room:'E4'},{time:'14:00',subject:'Science',room:'L1'}]},
-  {day:'Tuesday',periods:[{time:'9:00',subject:'English Lit',room:'E4'},{time:'11:00',subject:'Jewish Studies',room:'JS1'},{time:'14:00',subject:'Art',room:'A2'}]},
-  {day:'Wednesday',periods:[{time:'9:00',subject:'Maths',room:'R12'},{time:'11:00',subject:'Business',room:'B3'},{time:'14:00',subject:'Wood Tech',room:'DT1'}]},
-  {day:'Thursday',periods:[{time:'9:00',subject:'English Lang',room:'E4'},{time:'11:00',subject:'Science',room:'L1'},{time:'14:00',subject:'Jewish Studies',room:'JS1'}]},
-  {day:'Friday',periods:[{time:'9:00',subject:'English Lit',room:'E4'},{time:'11:00',subject:'Art',room:'A2'},{time:'14:00',subject:'Business',room:'B3'}]},
+// 2-week timetable — 1 subject per day, each subject appears twice across the fortnight
+const TIMETABLE_WEEK_A=[
+  {day:'Monday',    subject:'Maths',         room:'R12'},
+  {day:'Tuesday',   subject:'English Lang',  room:'E4'},
+  {day:'Wednesday', subject:'Science',       room:'L1'},
+  {day:'Thursday',  subject:'English Lit',   room:'E4'},
+  {day:'Friday',    subject:'Jewish Studies',room:'JS1'},
 ];
+const TIMETABLE_WEEK_B=[
+  {day:'Monday',    subject:'Art',           room:'A2'},
+  {day:'Tuesday',   subject:'Wood Tech',     room:'DT1'},
+  {day:'Wednesday', subject:'Business',      room:'B3'},
+  {day:'Thursday',  subject:'Maths',         room:'R12'},
+  {day:'Friday',    subject:'English Lang',  room:'E4'},
+];
+// Keep a flat TIMETABLE array for any legacy references
+const TIMETABLE=[...TIMETABLE_WEEK_A.map(d=>({day:d.day+' (Wk A)',week:'A',periods:[{time:'10:00',subject:d.subject,room:d.room}]})),
+                 ...TIMETABLE_WEEK_B.map(d=>({day:d.day+' (Wk B)',week:'B',periods:[{time:'10:00',subject:d.subject,room:d.room}]}))];
 const SUBJ_COLORS={'Maths':'#3b82f6','English Lang':'#a855f7','English Lit':'#ec4899','Science':'#22c55e','Jewish Studies':'#f59e0b','Art':'#f97316','Wood Tech':'#78716c','Business':'#06b6d4'};
 
 function defaultState(){
@@ -1354,29 +1365,35 @@ function renderAchievements(el){
 // CALENDAR
 // ═══════════════════════════════════════════════════════
 function renderCalendar(el){
-  const grid=TIMETABLE.map(({day,periods})=>`
-    <div>
-      <div class="cal-day-header">${day}</div>
-      ${periods.map((p,pi)=>{
-        const c=SUBJ_COLORS[p.subject]||'#555';
-        const subj=S.subjects.find(s=>s.name.startsWith(p.subject.split(' ')[0]))||null;
-        const sid=subj?subj.id:'';
-        const slotKey=day+'_'+pi;
-        const claimed=!!(S.calendarClaimed&&S.calendarClaimed[slotKey]);
-        return `<div class="cal-period" style="background:${c}14;border:1px solid ${c}33">
-          <div class="cal-time">${p.time}</div>
-          <div class="cal-subj" style="color:${c}">${p.subject}</div>
-          <div class="cal-room" style="margin-bottom:6px">${p.room}</div>
-          ${claimed
-            ? `<button disabled style="width:100%;padding:3px 0;border-radius:5px;background:${c}11;border:1px solid ${c}22;color:#444;font-size:10px;font-weight:700;opacity:0.5;cursor:default">✅ Done!</button>`
-            : `<button onclick="calEarnXP('${sid}','${p.subject}','${slotKey}',this)" style="width:100%;padding:3px 0;border-radius:5px;background:${c}22;border:1px solid ${c}44;color:${c};font-size:10px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='${c}44'" onmouseout="this.style.background='${c}22'">+2 XP ✓</button>`
-          }
-        </div>`;
-      }).join('')}
-    </div>`).join('');
-  el.innerHTML=`<div class="page-title">📅 Weekly Timetable</div>
-  <div style="margin-bottom:16px;font-size:13px;color:#555">Tap <strong style="color:#aaa">+2 XP</strong> after attending a lesson. Resets every Monday.</div>
-  <div class="scroll-x"><div class="cal-grid">${grid}</div></div>`;
+  function buildWeekHTML(days, weekLabel, weekKey){
+    return `<div style="margin-bottom:28px">
+      <div style="font-size:13px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding:6px 12px;background:#111;border-radius:8px;display:inline-block">${weekLabel}</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+        ${days.map(d=>{
+          const c=SUBJ_COLORS[d.subject]||'#555';
+          const subj=S.subjects.find(s=>s.name.startsWith(d.subject.split(' ')[0]))||null;
+          const sid=subj?subj.id:'';
+          const slotKey=weekKey+'_'+d.day;
+          const claimed=!!(S.calendarClaimed&&S.calendarClaimed[slotKey]);
+          return `<div style="border-radius:10px;padding:12px;background:${c}14;border:1px solid ${c}33">
+            <div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${d.day}</div>
+            <div style="font-size:13px;font-weight:700;color:${c};margin-bottom:2px">${d.subject}</div>
+            <div style="font-size:10px;color:#444;margin-bottom:8px">${d.room} · 10:00</div>
+            ${claimed
+              ? `<button disabled style="width:100%;padding:4px 0;border-radius:6px;background:${c}11;border:1px solid ${c}22;color:#444;font-size:10px;font-weight:700;opacity:0.5;cursor:default">✅ Done!</button>`
+              : `<button onclick="calEarnXP('${sid}','${d.subject}','${slotKey}',this)" style="width:100%;padding:4px 0;border-radius:6px;background:${c}22;border:1px solid ${c}44;color:${c};font-size:11px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='${c}44'" onmouseout="this.style.background='${c}22'">+2 XP ✓</button>`
+            }
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML=`
+  <div class="page-title">📅 2-Week Timetable</div>
+  <div style="font-size:13px;color:#555;margin-bottom:20px">1 subject per day · Tap <strong style="color:#aaa">+2 XP</strong> after each lesson · Resets every Monday</div>
+  ${buildWeekHTML(TIMETABLE_WEEK_A,'📅 Week A','wkA')}
+  ${buildWeekHTML(TIMETABLE_WEEK_B,'📅 Week B','wkB')}`;
 }
 
 function calEarnXP(subjId, subjName, slotKey, btn){
